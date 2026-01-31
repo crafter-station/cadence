@@ -15,28 +15,36 @@ export default function LandingPage() {
         }}
       />
 
-      {/* Radial lines */}
+      {/* Radial lines - pre-calculated to avoid hydration mismatch */}
       <svg
         className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20"
         viewBox="0 0 1000 1000"
         preserveAspectRatio="xMinYMin slice"
       >
-        {Array.from({ length: 24 }).map((_, i) => {
-          const angle = (i * 15) * (Math.PI / 180)
-          const x2 = 150 + Math.cos(angle) * 1500
-          const y2 = 200 + Math.sin(angle) * 1500
-          return (
-            <line
-              key={i}
-              x1="150"
-              y1="200"
-              x2={x2}
-              y2={y2}
-              stroke="#E8E4D9"
-              strokeWidth="0.5"
-            />
-          )
-        })}
+        <line x1="150" y1="200" x2="1650" y2="200" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="1599" y2="588" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="1450" y2="950" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="1210" y2="1250" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="900" y2="1500" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="538" y2="1649" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="150" y2="1700" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="-238" y2="1649" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="-600" y2="1500" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="-910" y2="1250" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="-1150" y2="950" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="-1299" y2="588" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="-1350" y2="200" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="-1299" y2="-188" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="-1150" y2="-550" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="-910" y2="-850" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="-600" y2="-1100" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="-238" y2="-1249" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="150" y2="-1300" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="538" y2="-1249" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="900" y2="-1100" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="1210" y2="-850" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="1450" y2="-550" stroke="#E8E4D9" strokeWidth="0.5" />
+        <line x1="150" y1="200" x2="1599" y2="-188" stroke="#E8E4D9" strokeWidth="0.5" />
       </svg>
 
       {/* Navigation */}
