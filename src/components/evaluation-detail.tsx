@@ -39,27 +39,12 @@ export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
   const [selectedEpoch, setSelectedEpoch] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<"sessions" | "prompts">("sessions")
 
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        Loading...
-      </div>
-    )
-  }
-
-  if (!evaluation) {
-    return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        Not found
-      </div>
-    )
-  }
-
-  const config = evaluation.config
-  const epochs = (evaluation as any).epochs ?? []
+  // Derive values from evaluation (must be before any early returns)
+  const config = evaluation?.config
+  const epochs = (evaluation as any)?.epochs ?? []
   const currentEpoch = epochs.find((e: any) => e.status === "running") ?? epochs[epochs.length - 1]
 
-  // Get all sessions from all epochs for the sessions view
+  // Get all sessions from all epochs for the sessions view (must be before early returns)
   const allSessions = useMemo(() => {
     const sessions: any[] = []
     for (const epoch of epochs) {
@@ -75,13 +60,33 @@ export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
   }, [epochs])
 
   // Get sessions for current view
-  const sessions = selectedEpoch !== null
-    ? epochs.find((e: any) => e.epochNumber === selectedEpoch)?.testRun?.sessions ?? []
-    : currentEpoch?.testRun?.sessions ?? []
+  const sessions = useMemo(() => {
+    if (selectedEpoch !== null) {
+      return epochs.find((e: any) => e.epochNumber === selectedEpoch)?.testRun?.sessions ?? []
+    }
+    return currentEpoch?.testRun?.sessions ?? []
+  }, [epochs, selectedEpoch, currentEpoch])
 
-  const progress = config?.maxEpochs
+  const progress = config?.maxEpochs && evaluation
     ? (evaluation.currentEpochNumber / config.maxEpochs) * 100
     : 0
+
+  // Early returns after all hooks
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    )
+  }
+
+  if (!evaluation) {
+    return (
+      <div className="h-full flex items-center justify-center text-muted-foreground">
+        Not found
+      </div>
+    )
+  }
 
   const handleStart = async () => {
     if (!user?.id) return
