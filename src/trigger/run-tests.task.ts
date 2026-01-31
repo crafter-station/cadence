@@ -5,16 +5,16 @@ import { z } from "zod";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 
-import { RunSessionTask } from "./run-session.task";
+import { RunCallTask } from "./run-call.task";
 import { AnalyzeResultsTask } from "./analyze-results.task";
 
 /**
- * Run Tests Task - Orchestrates parallel test execution across multiple personalities
+ * Run Tests Task - Orchestrates parallel voice call execution across multiple personalities
  *
  * This task manages the lifecycle of a complete test run:
  * 1. Validates the test run exists and is in pending state
- * 2. Creates test sessions for each personality
- * 3. Triggers parallel session execution with configurable concurrency
+ * 2. Fetches pre-created test sessions
+ * 3. Triggers parallel voice call execution
  * 4. Aggregates results and updates metrics
  * 5. Triggers analysis for self-healing suggestions
  */
@@ -25,11 +25,12 @@ export const RunTestsTask = schemaTask({
     userId: z.string(),
   }),
   run: async (payload) => {
-    // Fetch test run with config
+    // Fetch test run with config and external agent
     const testRun = await db.query.testRun.findFirst({
       where: eq(schema.testRun.id, payload.testRunId),
       with: {
         prompt: true,
+        externalAgent: true,
       },
     });
 
@@ -38,7 +39,19 @@ export const RunTestsTask = schemaTask({
     }
 
     if (testRun.status !== "pending") {
-      throw new TestRunAlreadyStartedError(payload.testRunId);
+      // Already started, return early instead of throwing
+      // This handles retries and duplicate triggers gracefully
+      logger.warn(`Test run ${payload.testRunId} already started, skipping`);
+      return {
+        testRunId: payload.testRunId,
+        totalSessions: testRun.totalSessions,
+        completedSessions: testRun.completedSessions,
+        failedSessions: testRun.failedSessions,
+        avgAccuracy: testRun.avgAccuracy,
+        avgLatency: testRun.avgLatency,
+        totalTokensIn: testRun.totalTokensIn,
+        totalTokensOut: testRun.totalTokensOut,
+      };
     }
 
     // Mark test run as running
@@ -55,14 +68,27 @@ export const RunTestsTask = schemaTask({
       throw new Error("Test run config is missing");
     }
 
+    // Validate external agent for voice calls
+    const externalAgent = testRun.externalAgent;
+    if (!externalAgent) {
+      throw new Error("Test run requires an external agent for voice calls");
+    }
+    if (!externalAgent.retellAgentId) {
+      throw new Error("External agent is missing retellAgentId required for voice calls");
+    }
+
     logger.info(`Starting test run ${payload.testRunId}`, {
       config,
       promptId: testRun.promptId,
+      externalAgentId: externalAgent.id,
     });
 
     // Fetch sessions that were pre-created by the server action
     const sessions = await db.query.testSession.findMany({
       where: eq(schema.testSession.testRunId, payload.testRunId),
+      with: {
+        personality: true,
+      },
     });
 
     if (sessions.length === 0) {
@@ -71,31 +97,32 @@ export const RunTestsTask = schemaTask({
 
     logger.info(`Found ${sessions.length} sessions to run`);
 
-    const testRunWithPrompt = testRun as typeof testRun & { prompt: { content: string } };
+    // Trigger all voice calls in parallel
+    const batchItems = sessions.map((session) => {
+      // Get personality prompt (use systemPrompt or description)
+      const personality = session.personality as schema.PersonalitySelect;
+      const personalityPrompt = personality.systemPrompt ?? personality.description;
 
-    // Trigger all sessions in parallel batches
-    const sessionPayloads = sessions.map((session) => ({
-      payload: {
-        sessionId: session.id,
-        testRunId: payload.testRunId,
-        userId: payload.userId,
-        promptContent: testRunWithPrompt.prompt.content,
-        personalityId: session.personalityId,
-      },
-      options: {
-        tags: [
-          `test-run:${payload.testRunId}`,
-          `session:${session.id}`,
-          `personality:${session.personalityId}`,
-        ],
-      },
-    }));
-
-    const batchItems = sessionPayloads.map((sp) => ({
-      task: RunSessionTask,
-      payload: sp.payload,
-      options: sp.options,
-    }));
+      return {
+        task: RunCallTask,
+        payload: {
+          sessionId: session.id,
+          testRunId: payload.testRunId,
+          userId: payload.userId,
+          promptContent: personalityPrompt,
+          personalityId: session.personalityId,
+          retellAgentId: externalAgent.retellAgentId!, // Validated above
+          contactName: personality.name,
+        },
+        options: {
+          tags: [
+            `test-run:${payload.testRunId}`,
+            `session:${session.id}`,
+            `personality:${session.personalityId}`,
+          ],
+        },
+      };
+    });
 
     const results = await batch.triggerByTaskAndWait(batchItems);
 

@@ -56,6 +56,10 @@ export const testRunRelations = relations(testRun, ({ one, many }) => ({
     fields: [testRun.promptId],
     references: [prompt.id],
   }),
+  externalAgent: one(externalAgent, {
+    fields: [testRun.externalAgentId],
+    references: [externalAgent.id],
+  }),
   experiment: one(experiment, {
     fields: [testRun.experimentId],
     references: [experiment.id],
@@ -142,11 +146,13 @@ export const healingSuggestionRelations = relations(
   })
 );
 
-export const externalAgentRelations = relations(externalAgent, ({ one }) => ({
+export const externalAgentRelations = relations(externalAgent, ({ one, many }) => ({
   prompt: one(prompt, {
     fields: [externalAgent.promptId],
     references: [prompt.id],
   }),
+  testRuns: many(testRun),
+  evaluations: many(evaluation),
 }));
 
 // Evaluation relations
@@ -160,6 +166,10 @@ export const evaluationRelations = relations(evaluation, ({ one, many }) => ({
     fields: [evaluation.bestPromptId],
     references: [prompt.id],
     relationName: "evaluationBest",
+  }),
+  externalAgent: one(externalAgent, {
+    fields: [evaluation.externalAgentId],
+    references: [externalAgent.id],
   }),
   epochs: many(evaluationEpoch),
 }));

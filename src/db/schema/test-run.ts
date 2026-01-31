@@ -10,6 +10,7 @@ import {
 import { TestStatusEnum } from "./enums";
 import { prompt } from "./prompt";
 import { experiment, experimentVariant } from "./experiment";
+import { externalAgent } from "./external-agent";
 
 export const testRun = pgTable("test_run", {
   id: text("id").primaryKey(),
@@ -17,6 +18,7 @@ export const testRun = pgTable("test_run", {
   promptId: text("prompt_id")
     .notNull()
     .references(() => prompt.id),
+  externalAgentId: text("external_agent_id").references(() => externalAgent.id),
   experimentId: text("experiment_id").references(() => experiment.id),
   variantId: text("variant_id").references(() => experimentVariant.id),
 

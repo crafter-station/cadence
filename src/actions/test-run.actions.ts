@@ -12,6 +12,7 @@ export interface StartTestRunInput {
   userId: string;
   promptId: string;
   personalityIds: string[];
+  externalAgentId: string; // Required for voice calls
   config: {
     testsPerPersonality: Record<string, number>;
     concurrency: number;
@@ -50,6 +51,7 @@ export async function startTestRunAction(
       id: testRunId,
       userId: input.userId,
       promptId: input.promptId,
+      externalAgentId: input.externalAgentId,
       experimentId: input.experimentId ?? null,
       variantId: input.variantId ?? null,
       status: "pending",

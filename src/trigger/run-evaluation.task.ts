@@ -26,11 +26,12 @@ export const RunEvaluationTask = schemaTask({
     userId: z.string(),
   }),
   run: async (payload) => {
-    // Fetch evaluation
+    // Fetch evaluation with external agent
     const evaluation = await db.query.evaluation.findFirst({
       where: eq(schema.evaluation.id, payload.evaluationId),
       with: {
         sourcePrompt: true,
+        externalAgent: true,
       },
     });
 
@@ -46,6 +47,12 @@ export const RunEvaluationTask = schemaTask({
     if (!config) {
       throw new Error("Evaluation config is missing");
     }
+
+    if (!evaluation.externalAgent) {
+      throw new Error("Evaluation requires an external agent for voice calls");
+    }
+
+    const externalAgentId = evaluation.externalAgentId;
 
     // Mark evaluation as running
     await db
@@ -141,6 +148,7 @@ export const RunEvaluationTask = schemaTask({
         epochNumber,
         promptId: currentPromptId,
         userId: payload.userId,
+        externalAgentId,
         config: {
           testsPerEpoch: config.testsPerEpoch,
           personalityIds: config.personalityIds,

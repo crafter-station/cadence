@@ -11,6 +11,7 @@ import {
   Plus,
   X,
   Sparkles,
+  Bot,
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -29,6 +30,7 @@ import {
 import { usePrompts } from "@/hooks/use-prompts"
 import { usePersonalities } from "@/hooks/use-personalities"
 import { useCreateEvaluation } from "@/hooks/use-evaluations"
+import { useExternalAgents } from "@/hooks/use-external-agents"
 
 const TARGET_METRICS = [
   { value: "conversion", label: "Conversion Rate", description: "Optimize for conversion goals" },
@@ -55,11 +57,13 @@ export function EvaluationCreator() {
   const { user } = useUser()
   const { data: prompts } = usePrompts(user?.id ?? "")
   const { data: personalities } = usePersonalities(user?.id ?? "")
+  const { data: externalAgents } = useExternalAgents(user?.id)
   const createEvaluation = useCreateEvaluation()
 
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [sourcePromptId, setSourcePromptId] = useState("")
+  const [externalAgentId, setExternalAgentId] = useState("")
   const [selectedPersonalities, setSelectedPersonalities] = useState<string[]>([])
   const [targetMetric, setTargetMetric] = useState<"conversion" | "accuracy" | "csat" | "latency">("conversion")
   const [maxEpochs, setMaxEpochs] = useState(5)
@@ -87,7 +91,7 @@ export function EvaluationCreator() {
   }
 
   const handleSubmit = async () => {
-    if (!user?.id || !name || !sourcePromptId || selectedPersonalities.length === 0) {
+    if (!user?.id || !name || !sourcePromptId || !externalAgentId || selectedPersonalities.length === 0) {
       return
     }
 
@@ -96,6 +100,7 @@ export function EvaluationCreator() {
       name,
       description: description || undefined,
       sourcePromptId,
+      externalAgentId,
       config: {
         maxEpochs,
         testsPerEpoch,
@@ -112,7 +117,7 @@ export function EvaluationCreator() {
     }
   }
 
-  const isValid = name && sourcePromptId && selectedPersonalities.length > 0
+  const isValid = name && sourcePromptId && externalAgentId && selectedPersonalities.length > 0
 
   return (
     <div className="h-full overflow-auto bg-background">
@@ -174,6 +179,41 @@ export function EvaluationCreator() {
                 </SelectContent>
               </Select>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* External Agent */}
+        <Card>
+          <CardHeader className="px-4 py-3 border-b border-border flex flex-row items-center gap-2">
+            <Bot className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-medium">Voice Agent</h2>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div>
+              <label className="text-sm font-medium block mb-1.5">
+                External Agent
+              </label>
+              <Select value={externalAgentId} onValueChange={setExternalAgentId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an agent to test against" />
+                </SelectTrigger>
+                <SelectContent>
+                  {externalAgents?.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      {agent.agentName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                The voice agent that will be called during testing
+              </p>
+            </div>
+            {externalAgents?.length === 0 && (
+              <p className="text-xs text-amber-500 mt-2">
+                No external agents found. Connect an agent from the stress test page first.
+              </p>
+            )}
           </CardContent>
         </Card>
 

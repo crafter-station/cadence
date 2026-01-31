@@ -32,6 +32,12 @@ export const testSession = pgTable("test_session", {
   tokensIn: integer("tokens_in").notNull().default(0),
   tokensOut: integer("tokens_out").notNull().default(0),
 
+  // Voice call fields
+  daptaCallId: text("dapta_call_id"),
+  audioUrl: text("audio_url"),
+  audioDurationSeconds: real("audio_duration_seconds"),
+  durationSeconds: real("duration_seconds"),
+
   // Full conversation transcript
   transcript: jsonb("transcript")
     .$type<

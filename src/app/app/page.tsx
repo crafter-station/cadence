@@ -1,79 +1,46 @@
 "use client"
 
-import { useState, useCallback, useMemo, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { useUser } from "@clerk/nextjs"
-import { Play, Settings2, Zap, Target, Sparkles, Plus, X, FileText, ChevronDown, ExternalLink } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Slider } from "@/components/ui/slider"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { TestRunner } from "@/components/test-runner"
+import { MetricsPanel } from "@/components/metrics-panel"
 import { PersonalityGrid } from "@/components/personality-grid"
+import { SelfHealingPanel } from "@/components/self-healing-panel"
+import { TestConfigPanel, type TestConfig } from "@/components/test-config-panel"
+import { BusinessOutcomesPanel } from "@/components/business-outcomes-panel"
+import { useState, useCallback, useEffect, useMemo } from "react"
+import { useUser } from "@clerk/nextjs"
 import { usePersonalities } from "@/hooks/use-personalities"
-import { usePrompts, useCreatePromptVersion } from "@/hooks/use-prompts"
-import { useCreateEvaluation, useStartEvaluation } from "@/hooks/use-evaluations"
-import type { Personality } from "@/lib/types"
+import { useStartTestRun, useStopTestRun } from "@/hooks/use-test-runs"
+import { useRealtimeTestRun } from "@/hooks/use-realtime-test-run"
+import type { Personality, TestSession, TestStatus } from "@/lib/types"
 
-const TARGET_METRICS = [
-  { value: "conversion", label: "Conversion Rate", description: "Optimize for conversion goals" },
-  { value: "accuracy", label: "Accuracy", description: "Optimize for response accuracy" },
-  { value: "csat", label: "CSAT", description: "Optimize for customer satisfaction" },
-  { value: "latency", label: "Latency", description: "Optimize for response speed" },
-]
+const DEFAULT_CONFIG: TestConfig = {
+  testsPerPersonality: {},
+  concurrency: 10,
+  businessMetrics: {
+    resolutionTarget: 85,
+    avgHandleTimeTarget: 120,
+    csatTarget: 4.2,
+    escalationRateTarget: 10,
+    costPerCall: 0.45,
+  },
+}
 
-const PREDEFINED_GOALS = [
-  { label: "Schedule Demo", value: "Schedule a demo" },
-  { label: "Book Meeting", value: "Book a meeting" },
-  { label: "Collect Email", value: "Collect email address" },
-  { label: "Sign Up", value: "Complete sign up" },
-  { label: "Purchase", value: "Complete purchase" },
-  { label: "Upgrade Plan", value: "Upgrade subscription" },
-  { label: "Get Quote", value: "Request a quote" },
-  { label: "Contact Sales", value: "Contact sales team" },
-  { label: "Download", value: "Download resource" },
-  { label: "Start Trial", value: "Start free trial" },
-]
+const MOCK_PROMPT_ID = "prompt_demo_123"
+const MOCK_EXTERNAL_AGENT_ID = "agent_demo_123" // TODO: Replace with actual agent selector
 
 export default function EvaluationPage() {
-  const router = useRouter()
   const { user } = useUser()
-  const userId = user?.id ?? ""
+  const userId = user?.id
 
-  // Configuration state
+  const [sessions, setSessions] = useState<TestSession[]>([])
+  const [isRunning, setIsRunning] = useState(false)
   const [selectedPersonalities, setSelectedPersonalities] = useState<string[]>([])
-  const [selectedPromptId, setSelectedPromptId] = useState("")
-  const [testsPerPersonality, setTestsPerPersonality] = useState(10)
-  const [maxEpochs, setMaxEpochs] = useState(3)
-  const [concurrency, setConcurrency] = useState(5)
-  const [improvementThreshold, setImprovementThreshold] = useState(2)
-  const [targetMetric, setTargetMetric] = useState<"conversion" | "accuracy" | "csat" | "latency">("conversion")
-  const [conversionGoals, setConversionGoals] = useState<string[]>([])
-  const [newGoal, setNewGoal] = useState("")
-  const [isStarting, setIsStarting] = useState(false)
-  const [showPromptPreview, setShowPromptPreview] = useState(false)
-  const [editedPromptContent, setEditedPromptContent] = useState("")
-  const [hasPromptChanges, setHasPromptChanges] = useState(false)
+  const [config, setConfig] = useState<TestConfig>(DEFAULT_CONFIG)
+  const [activeTab, setActiveTab] = useState<"config" | "metrics" | "healing" | "outcomes">("config")
+  const [currentTestRunId, setCurrentTestRunId] = useState<string | null>(null)
+  const [useSimulation, setUseSimulation] = useState(true)
 
-  const { data: backendPersonalities } = usePersonalities(userId)
-  const { data: prompts } = usePrompts(userId)
-  const createEvaluation = useCreateEvaluation()
-  const startEvaluation = useStartEvaluation()
-  const createPromptVersion = useCreatePromptVersion()
+  const { data: backendPersonalities, isLoading: isLoadingPersonalities } = usePersonalities(userId)
 
   const personalities = useMemo<Personality[]>(() => {
     if (!backendPersonalities) return []
@@ -87,450 +54,397 @@ export default function EvaluationPage() {
     }))
   }, [backendPersonalities])
 
-  // Auto-select first prompt
-  const activePrompt = prompts?.find(p => p.id === selectedPromptId) ?? prompts?.[0]
+  const startTestRunMutation = useStartTestRun()
+  const stopTestRunMutation = useStopTestRun()
 
-  // Set prompt ID when prompts load
+  const { sessionProgress, isConnected } = useRealtimeTestRun({
+    testRunId: currentTestRunId,
+    enabled: !useSimulation && !!currentTestRunId,
+  })
+
   useEffect(() => {
-    if (prompts && prompts.length > 0 && !selectedPromptId) {
-      setSelectedPromptId(prompts[0].id)
-    }
-  }, [prompts, selectedPromptId])
+    if (!useSimulation && sessionProgress.length > 0) {
+      setSessions((prev) => {
+        const updated = [...prev]
+        for (const progress of sessionProgress) {
+          const idx = updated.findIndex((s) => s.id === progress.sessionId)
+          if (idx >= 0) {
+            updated[idx] = {
+              ...updated[idx],
+              status: progress.status as TestStatus,
+              progress: progress.progress,
+              turns: progress.turns,
+              accuracy: progress.accuracy ?? updated[idx].accuracy,
+            }
+          }
+        }
 
-  // Sync edited content with selected prompt
-  useEffect(() => {
-    if (activePrompt) {
-      setEditedPromptContent(activePrompt.content)
-      setHasPromptChanges(false)
-    }
-  }, [activePrompt])
+        const allComplete = updated.every((s) => s.status === "completed" || s.status === "failed")
+        if (allComplete && updated.length > 0) {
+          setIsRunning(false)
+        }
 
-  const handlePromptContentChange = (value: string) => {
-    setEditedPromptContent(value)
-    setHasPromptChanges(value !== activePrompt?.content)
-  }
-
-  const handleSavePromptVersion = async () => {
-    if (!activePrompt || !hasPromptChanges || !userId) return
-
-    try {
-      const result = await createPromptVersion.mutateAsync({
-        userId,
-        parentId: activePrompt.id,
-        content: editedPromptContent,
+        return updated
       })
-      if (result.success && result.promptId) {
-        setSelectedPromptId(result.promptId)
-        setHasPromptChanges(false)
+    }
+  }, [sessionProgress, useSimulation])
+
+  const startTests = useCallback(async () => {
+    if (selectedPersonalities.length === 0) return
+    if (!useSimulation && !userId) return
+
+    setIsRunning(true)
+
+    if (!useSimulation && userId) {
+      const result = await startTestRunMutation.mutateAsync({
+        userId,
+        promptId: MOCK_PROMPT_ID,
+        externalAgentId: MOCK_EXTERNAL_AGENT_ID,
+        personalityIds: selectedPersonalities,
+        config,
+      })
+
+      if (result.success && result.testRunId) {
+        setCurrentTestRunId(result.testRunId)
+        const newSessions: TestSession[] = []
+        selectedPersonalities.forEach((pId) => {
+          const testCount = config.testsPerPersonality[pId] || 10
+          for (let i = 0; i < testCount; i++) {
+            newSessions.push({
+              id: `session-${pId}-${i}-${Date.now()}`,
+              personalityId: pId,
+              instanceId: i + 1,
+              status: "running",
+              progress: 0,
+              latency: [],
+              accuracy: 0,
+              turns: 0,
+              errors: 0,
+              transcript: [],
+            })
+          }
+        })
+        setSessions(newSessions)
+      } else {
+        setIsRunning(false)
+        console.error("Failed to start test run:", result.error)
       }
-    } catch (error) {
-      console.error("Failed to save prompt version:", error)
+    } else {
+      const newSessions: TestSession[] = []
+      selectedPersonalities.forEach((pId) => {
+        const testCount = config.testsPerPersonality[pId] || 10
+        for (let i = 0; i < testCount; i++) {
+          newSessions.push({
+            id: `session-${pId}-${i}-${Date.now()}`,
+            personalityId: pId,
+            instanceId: i + 1,
+            status: "running",
+            progress: 0,
+            latency: [],
+            accuracy: 0,
+            turns: 0,
+            errors: 0,
+            transcript: [],
+          })
+        }
+      })
+      setSessions(newSessions)
+
+      const runBatch = (batch: TestSession[], batchIndex: number) => {
+        batch.forEach((session, idx) => {
+          simulateTest(session.id, batchIndex * 50 + idx * 20)
+        })
+      }
+
+      for (let i = 0; i < newSessions.length; i += config.concurrency) {
+        const batch = newSessions.slice(i, i + config.concurrency)
+        setTimeout(
+          () => runBatch(batch, Math.floor(i / config.concurrency)),
+          Math.floor(i / config.concurrency) * 200
+        )
+      }
     }
+  }, [selectedPersonalities, config, useSimulation, userId, startTestRunMutation])
+
+  const simulateTest = (sessionId: string, delay: number) => {
+    const baseDelay = delay
+    let progress = 0
+
+    setTimeout(() => {
+      const interval = setInterval(() => {
+        progress += Math.random() * 12 + 3
+        if (progress >= 100) {
+          progress = 100
+          clearInterval(interval)
+        }
+
+        setSessions((prev) => {
+          const updated = prev.map((s) => {
+            if (s.id !== sessionId) return s
+
+            const newLatency = [...s.latency, Math.floor(Math.random() * 400 + 100)]
+            const newTurns = Math.floor(progress / 10)
+            const newErrors = Math.floor(Math.random() * 3)
+            const newAccuracy = Math.min(99, 70 + Math.random() * 25)
+
+            const transcriptMessages = generateTranscript(newTurns, s.personalityId)
+
+            return {
+              ...s,
+              progress,
+              status: (progress >= 100 ? "completed" : "running") as TestStatus,
+              latency: newLatency.slice(-20),
+              turns: newTurns,
+              errors: newErrors,
+              accuracy: newAccuracy,
+              transcript: transcriptMessages,
+            }
+          })
+
+          const allComplete = updated.every((s) => s.status === "completed" || s.status === "failed")
+          if (allComplete) {
+            setTimeout(() => setIsRunning(false), 100)
+          }
+
+          return updated
+        })
+      }, 150 + Math.random() * 100)
+    }, baseDelay)
   }
 
-  const addGoal = () => {
-    if (newGoal.trim() && !conversionGoals.includes(newGoal.trim())) {
-      setConversionGoals([...conversionGoals, newGoal.trim()])
-      setNewGoal("")
+  const generateTranscript = (turns: number, personalityId: string) => {
+    const transcripts: Record<string, { role: "user" | "agent"; content: string }[]> = {
+      "assertive-executive": [
+        { role: "user", content: "I need this resolved now." },
+        { role: "agent", content: "I understand the urgency. Let me help you immediately." },
+        { role: "user", content: "Skip the pleasantries. What's the status?" },
+        { role: "agent", content: "Your order ships tomorrow, tracking in 2 hours." },
+        { role: "user", content: "Fine. What about the refund?" },
+        { role: "agent", content: "Processed. 3-5 business days to your account." },
+      ],
+      "confused-elder": [
+        { role: "user", content: "Hello? Is this... the support line?" },
+        { role: "agent", content: "Yes, this is customer support. How can I help you today?" },
+        { role: "user", content: "I'm sorry, could you repeat that?" },
+        { role: "agent", content: "Of course. I'm here to help. What do you need assistance with?" },
+        { role: "user", content: "My grandson said something about an account..." },
+        { role: "agent", content: "I can help you with your account. Do you have your account number?" },
+      ],
+      "technical-expert": [
+        { role: "user", content: "What's your API rate limit for the v3 endpoint?" },
+        { role: "agent", content: "The v3 REST API allows 1000 requests per minute per API key." },
+        { role: "user", content: "Does that include websocket connections?" },
+        { role: "agent", content: "No, websocket connections have a separate limit of 100 concurrent." },
+        { role: "user", content: "What's the payload size limit for batch operations?" },
+        { role: "agent", content: "Batch payloads are limited to 10MB with max 500 items per request." },
+      ],
+      "emotional-customer": [
+        { role: "user", content: "I've been waiting for THREE WEEKS!" },
+        { role: "agent", content: "I completely understand your frustration. That wait is unacceptable." },
+        { role: "user", content: "This is the worst experience I've ever had." },
+        { role: "agent", content: "I'm truly sorry. Let me make this right for you personally." },
+        { role: "user", content: "I just want this to be over..." },
+        { role: "agent", content: "I hear you. I'm prioritizing your case right now." },
+      ],
+      "multilingual-user": [
+        { role: "user", content: "Hi, I need help with mi cuenta, please." },
+        { role: "agent", content: "Of course, I can help with your account. What do you need?" },
+        { role: "user", content: "The payment, it says rechazado?" },
+        { role: "agent", content: "I see the payment was declined. Let me check the reason." },
+        { role: "user", content: "Ay, maybe it's the tarjeta expiration?" },
+        { role: "agent", content: "Yes, your card expired last month. Would you like to update it?" },
+      ],
+      "rapid-speaker": [
+        { role: "user", content: "Hey quick question about shipping also billing and returns" },
+        { role: "agent", content: "I can help with all three. Let's start with shipping." },
+        { role: "user", content: "Yeah shipping first also what's the warranty period" },
+        { role: "agent", content: "Shipping is 3-5 days. Warranty is 2 years for electronics." },
+        { role: "user", content: "Perfect and the return window international orders" },
+        { role: "agent", content: "30 days for returns, 45 days for international orders." },
+      ],
     }
+
+    const messages = transcripts[personalityId] || transcripts["assertive-executive"] || []
+    return messages.slice(0, Math.min(turns, messages.length)).map((m, i) => ({
+      ...m,
+      timestamp: Date.now() - (messages.length - i) * 2000,
+    }))
   }
 
-  const removeGoal = (goal: string) => {
-    setConversionGoals(conversionGoals.filter((g) => g !== goal))
-  }
+  const stopTests = useCallback(async () => {
+    if (!useSimulation && currentTestRunId && userId) {
+      await stopTestRunMutation.mutateAsync({
+        testRunId: currentTestRunId,
+        userId,
+      })
+    }
+
+    setIsRunning(false)
+    setCurrentTestRunId(null)
+    setSessions((prev) =>
+      prev.map((s) => ({
+        ...s,
+        status: s.status === "running" ? "failed" : s.status,
+      }))
+    )
+  }, [useSimulation, currentTestRunId, userId, stopTestRunMutation])
 
   const togglePersonality = useCallback((id: string) => {
-    setSelectedPersonalities((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    )
+    setSelectedPersonalities((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
   }, [])
 
   const selectAll = useCallback(() => {
     setSelectedPersonalities(personalities.map((p) => p.id))
   }, [personalities])
 
-  const totalTests = selectedPersonalities.length * testsPerPersonality
-  const isValid = selectedPersonalities.length > 0 && activePrompt
+  const aggregatedSessions = selectedPersonalities.map((pId) => {
+    const personalitySessions = sessions.filter((s) => s.personalityId === pId)
+    const completed = personalitySessions.filter((s) => s.status === "completed").length
+    const total = personalitySessions.length
+    const avgProgress = total > 0 ? personalitySessions.reduce((sum, s) => sum + s.progress, 0) / total : 0
+    const avgAccuracy =
+      completed > 0
+        ? personalitySessions.filter((s) => s.status === "completed").reduce((sum, s) => sum + s.accuracy, 0) / completed
+        : 0
+    const allLatencies = personalitySessions.flatMap((s) => s.latency)
+    const latestTranscript = personalitySessions.length > 0 ? personalitySessions[personalitySessions.length - 1].transcript : []
 
-  const handleStartExperiment = async () => {
-    if (!userId || !activePrompt || selectedPersonalities.length === 0) return
-
-    setIsStarting(true)
-    try {
-      // Create experiment
-      const experimentName = `${activePrompt.name} - ${new Date().toLocaleString()}`
-      const result = await createEvaluation.mutateAsync({
-        userId,
-        name: experimentName,
-        sourcePromptId: activePrompt.id,
-        config: {
-          maxEpochs,
-          testsPerEpoch: totalTests,
-          personalityIds: selectedPersonalities,
-          concurrency,
-          improvementThreshold,
-          targetMetric,
-          conversionGoals,
-        },
-      })
-
-      if (result.success && result.evaluationId) {
-        // Start the experiment
-        await startEvaluation.mutateAsync({
-          evaluationId: result.evaluationId,
-          userId,
-        })
-
-        // Redirect to experiment detail
-        router.push(`/app/evaluations/${result.evaluationId}`)
-      }
-    } catch (error) {
-      console.error("Failed to start experiment:", error)
-    } finally {
-      setIsStarting(false)
+    return {
+      id: `agg-${pId}`,
+      personalityId: pId,
+      instanceId: 0,
+      status: (completed === total && total > 0 ? "completed" : total > 0 ? "running" : "idle") as TestStatus,
+      progress: avgProgress,
+      latency: allLatencies.slice(-20),
+      accuracy: avgAccuracy,
+      turns: Math.max(...personalitySessions.map((s) => s.turns), 0),
+      errors: personalitySessions.reduce((sum, s) => sum + s.errors, 0),
+      transcript: latestTranscript,
     }
-  }
+  })
+
+  const totalTests = selectedPersonalities.reduce((sum, id) => sum + (config.testsPerPersonality[id] || 10), 0)
+
+  const completedTests = sessions.filter((s) => s.status === "completed").length
+
+  const tabs = [
+    { id: "config", label: "Configuration" },
+    { id: "metrics", label: "Metrics" },
+    { id: "healing", label: "Self-Healing" },
+    { id: "outcomes", label: "Business" },
+  ] as const
 
   return (
     <div className="h-full overflow-auto">
-      <div className="container mx-auto px-4 py-6 max-w-5xl">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-xl font-medium tracking-tight mb-1">Agent Evaluation</h1>
-          <p className="text-muted-foreground text-sm">
-            Configure and run prompt optimization experiments
-          </p>
+      <div className="container mx-auto px-4 py-6">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-medium tracking-tight text-foreground mb-1">Agent Evaluation</h1>
+            <p className="text-muted-foreground text-sm">Large-scale parallel testing with synthetic user personas</p>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <button
+              onClick={() => setUseSimulation(!useSimulation)}
+              className={`px-2 py-1 rounded text-xs transition-colors ${
+                useSimulation ? "bg-yellow-500/20 text-yellow-600" : "bg-green-500/20 text-green-600"
+              }`}
+            >
+              {useSimulation ? "Simulation" : "Live"}
+            </button>
+            <span className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 ${!useSimulation && isConnected ? "bg-chart-2" : "bg-muted"}`} />
+              {!useSimulation && isConnected ? "Connected" : useSimulation ? "Simulated" : "Disconnected"}
+            </span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Main Config */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Prompt Selection */}
-            <Card>
-              <CardHeader className="px-4 py-3 border-b border-border flex flex-row items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <h2 className="text-sm font-medium">Source Prompt</h2>
-                </div>
-                <Link href="/app/prompts">
-                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
-                    <ExternalLink className="w-3 h-3" />
-                    Manage
-                  </Button>
-                </Link>
-              </CardHeader>
-              <CardContent className="p-4 space-y-3">
-                <Select value={selectedPromptId} onValueChange={(id) => {
-                  setSelectedPromptId(id)
-                  setShowPromptPreview(false)
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a prompt to optimize" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {prompts?.map((prompt) => (
-                      <SelectItem key={prompt.id} value={prompt.id}>
-                        {prompt.name} (v{prompt.version})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {activePrompt && (
-                  <Collapsible open={showPromptPreview} onOpenChange={setShowPromptPreview}>
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-between h-8 text-xs text-muted-foreground"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          {showPromptPreview ? "Hide" : "Preview"} prompt content
-                          {hasPromptChanges && (
-                            <Badge variant="outline" className="text-chart-3 border-chart-3/30 text-[10px] px-1">
-                              Unsaved
-                            </Badge>
-                          )}
-                        </span>
-                        <ChevronDown className={`w-3 h-3 transition-transform ${showPromptPreview ? "rotate-180" : ""}`} />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-3">
-                      <div className="space-y-3">
-                        <Textarea
-                          value={editedPromptContent}
-                          onChange={(e) => handlePromptContentChange(e.target.value)}
-                          className="min-h-[200px] font-mono text-xs"
-                          placeholder="Enter your prompt..."
-                        />
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-muted-foreground">
-                            {editedPromptContent.length} chars · v{activePrompt.version}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {hasPromptChanges && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => {
-                                  setEditedPromptContent(activePrompt.content)
-                                  setHasPromptChanges(false)
-                                }}
-                              >
-                                Revert
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs"
-                              disabled={!hasPromptChanges || createPromptVersion.isPending}
-                              onClick={handleSavePromptVersion}
-                            >
-                              {createPromptVersion.isPending ? "Saving..." : "Save as New Version"}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Personality Selection */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2 space-y-4">
             <PersonalityGrid
               personalities={personalities}
               selected={selectedPersonalities}
               onToggle={togglePersonality}
               onSelectAll={selectAll}
-              disabled={isStarting}
+              disabled={isRunning}
             />
 
-            {/* Target Metric */}
-            <Card>
-              <CardHeader className="px-4 py-3 border-b border-border flex flex-row items-center gap-2">
-                <Target className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-sm font-medium">Target Metric</h2>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-2 gap-3">
-                  {TARGET_METRICS.map((metric) => (
-                    <button
-                      key={metric.value}
-                      onClick={() => setTargetMetric(metric.value as typeof targetMetric)}
-                      className={`p-3 rounded-lg border text-left transition-colors ${
-                        targetMetric === metric.value
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <span className="text-sm font-medium block">{metric.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {metric.description}
-                      </span>
-                    </button>
-                  ))}
+            {selectedPersonalities.length > 0 && (
+              <div className="flex items-center justify-between px-4 py-3 border border-border bg-card">
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Total Tests</span>
+                    <span className="text-sm font-mono">{totalTests.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Concurrency</span>
+                    <span className="text-sm font-mono">{config.concurrency}x</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Est. Cost</span>
+                    <span className="text-sm font-mono">${(totalTests * config.businessMetrics.costPerCall).toFixed(2)}</span>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Conversion Goals */}
-            {targetMetric === "conversion" && (
-              <Card>
-                <CardHeader className="px-4 py-3 border-b border-border flex flex-row items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-muted-foreground" />
-                  <h2 className="text-sm font-medium">Conversion Goals</h2>
-                </CardHeader>
-                <CardContent className="p-4 space-y-4">
-                  {/* Predefined Goals */}
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-2">Quick select</div>
-                    <div className="flex flex-wrap gap-2">
-                      {PREDEFINED_GOALS.map((goal) => {
-                        const isSelected = conversionGoals.includes(goal.value)
-                        return (
-                          <button
-                            key={goal.value}
-                            onClick={() => {
-                              if (isSelected) {
-                                removeGoal(goal.value)
-                              } else {
-                                setConversionGoals([...conversionGoals, goal.value])
-                              }
-                            }}
-                            className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
-                              isSelected
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "border-border hover:border-primary/50 hover:bg-secondary/50"
-                            }`}
-                          >
-                            {goal.label}
-                          </button>
-                        )
-                      })}
-                    </div>
+                {isRunning && (
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 bg-chart-2 animate-pulse" />
+                    <span className="text-xs font-mono">
+                      {completedTests}/{sessions.length}
+                    </span>
                   </div>
-
-                  {/* Custom Goal Input */}
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-2">Or add custom</div>
-                    <div className="flex gap-2">
-                      <Input
-                        value={newGoal}
-                        onChange={(e) => setNewGoal(e.target.value)}
-                        placeholder="Enter custom goal..."
-                        onKeyDown={(e) => e.key === "Enter" && addGoal()}
-                        className="text-sm"
-                      />
-                      <Button onClick={addGoal} size="sm" variant="outline">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Selected Goals Summary */}
-                  {conversionGoals.length > 0 && (
-                    <div className="pt-3 border-t border-border">
-                      <div className="text-xs text-muted-foreground mb-2">
-                        Selected ({conversionGoals.length})
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {conversionGoals.map((goal) => (
-                          <Badge key={goal} variant="secondary" className="gap-1 pr-1">
-                            {goal}
-                            <button
-                              onClick={() => removeGoal(goal)}
-                              className="ml-1 hover:text-destructive"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                )}
+              </div>
             )}
+
+            <TestRunner
+              sessions={aggregatedSessions as unknown as TestSession[]}
+              personalities={personalities}
+              isRunning={isRunning}
+              onStart={startTests}
+              onStop={stopTests}
+              hasSelection={selectedPersonalities.length > 0}
+            />
           </div>
 
-          {/* Right Column - Settings */}
-          <div className="space-y-4">
-            {/* Experiment Settings */}
-            <Card>
-              <CardHeader className="px-4 py-3 border-b border-border flex flex-row items-center gap-2">
-                <Settings2 className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-sm font-medium">Experiment Settings</h2>
-              </CardHeader>
-              <CardContent className="p-4 space-y-6">
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <label className="text-sm font-medium">Tests per Persona</label>
-                    <span className="text-sm text-muted-foreground">{testsPerPersonality}</span>
-                  </div>
-                  <Slider
-                    value={[testsPerPersonality]}
-                    onValueChange={([v]) => setTestsPerPersonality(v)}
-                    min={1}
-                    max={50}
-                    step={1}
-                  />
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <label className="text-sm font-medium">Max Epochs</label>
-                    <span className="text-sm text-muted-foreground">{maxEpochs}</span>
-                  </div>
-                  <Slider
-                    value={[maxEpochs]}
-                    onValueChange={([v]) => setMaxEpochs(v)}
-                    min={1}
-                    max={10}
-                    step={1}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Optimization iterations
-                  </p>
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <label className="text-sm font-medium">Concurrency</label>
-                    <span className="text-sm text-muted-foreground">{concurrency}x</span>
-                  </div>
-                  <Slider
-                    value={[concurrency]}
-                    onValueChange={([v]) => setConcurrency(v)}
-                    min={1}
-                    max={20}
-                    step={1}
-                  />
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <label className="text-sm font-medium">Improvement Threshold</label>
-                    <span className="text-sm text-muted-foreground">{improvementThreshold}%</span>
-                  </div>
-                  <Slider
-                    value={[improvementThreshold]}
-                    onValueChange={([v]) => setImprovementThreshold(v)}
-                    min={0.5}
-                    max={10}
-                    step={0.5}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Min improvement to accept new version
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Summary & Run */}
-            <Card>
-              <CardHeader className="px-4 py-3 border-b border-border flex flex-row items-center gap-2">
-                <Zap className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-sm font-medium">Summary</h2>
-              </CardHeader>
-              <CardContent className="p-4 space-y-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Personas</span>
-                    <span className="font-mono">{selectedPersonalities.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tests per Epoch</span>
-                    <span className="font-mono">{totalTests}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Max Epochs</span>
-                    <span className="font-mono">{maxEpochs}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Tests (max)</span>
-                    <span className="font-mono">{totalTests * maxEpochs}</span>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleStartExperiment}
-                  disabled={!isValid || isStarting}
-                  className="w-full gap-2"
-                  size="lg"
+          <div className="flex flex-col min-h-0 overflow-hidden">
+            <div className="flex border border-border border-b-0 bg-card shrink-0">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 px-2 py-2.5 text-xs font-medium transition-colors ${
+                    activeTab === tab.id
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                  }`}
                 >
-                  <Play className="h-4 w-4" />
-                  {isStarting ? "Starting..." : "Run Experiment"}
-                </Button>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-                {!isValid && selectedPersonalities.length === 0 && (
-                  <p className="text-xs text-center text-muted-foreground">
-                    Select at least one persona to continue
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+            <div className="flex-1 overflow-y-auto border border-border border-t-0">
+              {activeTab === "config" && (
+                <TestConfigPanel
+                  personalities={personalities}
+                  selected={selectedPersonalities}
+                  config={config}
+                  onConfigChange={setConfig}
+                  disabled={isRunning}
+                />
+              )}
+              {activeTab === "metrics" && <MetricsPanel sessions={sessions} personalities={personalities} />}
+              {activeTab === "healing" && (
+                <SelfHealingPanel
+                  sessions={sessions}
+                  personalities={personalities}
+                  isRunning={isRunning}
+                  onApplySuggestion={(id) => console.log("Applied:", id)}
+                />
+              )}
+              {activeTab === "outcomes" && (
+                <BusinessOutcomesPanel sessions={sessions} config={config} personalities={personalities} isRunning={isRunning} />
+              )}
+            </div>
           </div>
         </div>
       </div>
