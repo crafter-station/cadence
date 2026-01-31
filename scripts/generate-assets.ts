@@ -2,13 +2,13 @@ import sharp from "sharp";
 import { writeFileSync } from "fs";
 import { join } from "path";
 
-// Brand colors extracted from globals.css (oklch converted to hex approximations)
+// Brand colors from landing page
 const COLORS = {
-  background: "#141211", // oklch(0.085 0.01 20)
-  foreground: "#faf9f8", // oklch(0.98 0.005 20)
-  accent: "#5b8def", // oklch(0.65 0.15 250)
-  muted: "#3d3a38", // oklch(0.2 0.008 20)
-  border: "#4a4644", // oklch(0.25 0.008 20)
+  background: "#0A0A0A",
+  foreground: "#E8E4D9",
+  foregroundMuted: "rgba(232, 228, 217, 0.4)",
+  foregroundSubtle: "rgba(232, 228, 217, 0.1)",
+  border: "rgba(232, 228, 217, 0.1)",
 };
 
 const PUBLIC_DIR = join(process.cwd(), "public");
@@ -18,57 +18,123 @@ async function generateOGImage(
   height: number,
   filename: string
 ) {
-  // Create SVG with brand elements
+  // Neo-Brutalist Swiss Typography style matching landing page
   const svg = `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="grain" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:${COLORS.background};stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1a1918;stop-opacity:1" />
-        </linearGradient>
-        <!-- Subtle grid pattern -->
-        <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-          <path d="M 60 0 L 0 0 0 60" fill="none" stroke="${COLORS.border}" stroke-width="0.5" opacity="0.3"/>
+        <!-- Grain texture filter -->
+        <filter id="grain" x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" result="noise"/>
+          <feColorMatrix type="saturate" values="0"/>
+          <feBlend in="SourceGraphic" in2="noise" mode="multiply"/>
+        </filter>
+
+        <!-- Radial lines pattern -->
+        <pattern id="radialLines" x="0" y="0" width="${width}" height="${height}" patternUnits="userSpaceOnUse">
+          <line x1="100" y1="80" x2="1200" y2="80" stroke="${COLORS.foreground}" stroke-width="0.5" opacity="0.15"/>
+          <line x1="100" y1="80" x2="1150" y2="400" stroke="${COLORS.foreground}" stroke-width="0.5" opacity="0.15"/>
+          <line x1="100" y1="80" x2="1000" y2="700" stroke="${COLORS.foreground}" stroke-width="0.5" opacity="0.15"/>
+          <line x1="100" y1="80" x2="750" y2="900" stroke="${COLORS.foreground}" stroke-width="0.5" opacity="0.15"/>
+          <line x1="100" y1="80" x2="400" y2="1000" stroke="${COLORS.foreground}" stroke-width="0.5" opacity="0.15"/>
+          <line x1="100" y1="80" x2="100" y2="1000" stroke="${COLORS.foreground}" stroke-width="0.5" opacity="0.15"/>
+          <line x1="100" y1="80" x2="-200" y2="900" stroke="${COLORS.foreground}" stroke-width="0.5" opacity="0.15"/>
         </pattern>
       </defs>
 
       <!-- Background -->
-      <rect width="100%" height="100%" fill="url(#grain)"/>
+      <rect width="100%" height="100%" fill="${COLORS.background}"/>
 
-      <!-- Grid overlay -->
-      <rect width="100%" height="100%" fill="url(#grid)"/>
+      <!-- Radial lines overlay -->
+      <rect width="100%" height="100%" fill="url(#radialLines)"/>
 
-      <!-- Accent circle -->
-      <circle cx="${width - 200}" cy="${height - 150}" r="300" fill="${COLORS.accent}" opacity="0.08"/>
+      <!-- Grain overlay -->
+      <rect width="100%" height="100%" fill="${COLORS.background}" opacity="0.03" filter="url(#grain)"/>
 
-      <!-- Small decorative elements -->
-      <circle cx="80" cy="80" r="6" fill="${COLORS.accent}" opacity="0.6"/>
-      <circle cx="${width - 80}" cy="${height - 80}" r="4" fill="${COLORS.foreground}" opacity="0.3"/>
+      <!-- Small decorative square (logo mark) -->
+      <rect x="80" y="80" width="8" height="8" fill="${COLORS.foreground}"/>
 
-      <!-- Main wordmark -->
+      <!-- Floating label top-left -->
+      <text x="80" y="120" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="${COLORS.foregroundMuted}" letter-spacing="0.1em">
+        AI AGENT TESTING
+      </text>
+
+      <!-- Floating label top-right -->
+      <text x="${width - 80}" y="80" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="${COLORS.foregroundMuted}" letter-spacing="0.1em" text-anchor="end">
+        PARALLEL
+      </text>
+      <text x="${width - 80}" y="95" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="${COLORS.foregroundMuted}" letter-spacing="0.1em" text-anchor="end">
+        EXECUTION
+      </text>
+
+      <!-- Horizontal divider line -->
+      <line x1="80" y1="200" x2="280" y2="200" stroke="${COLORS.foreground}" stroke-width="1" opacity="0.3"/>
+
+      <!-- Main headline - Large-Scale -->
       <text
         x="80"
-        y="${height / 2 - 20}"
+        y="290"
         font-family="system-ui, -apple-system, sans-serif"
-        font-size="72"
-        font-weight="600"
+        font-size="100"
+        font-weight="700"
         fill="${COLORS.foreground}"
-        letter-spacing="-0.03em"
+        letter-spacing="-0.04em"
+      >Large-Scale</text>
+
+      <!-- Main headline - Agent -->
+      <text
+        x="80"
+        y="390"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="100"
+        font-weight="700"
+        fill="${COLORS.foreground}"
+        letter-spacing="-0.04em"
+      >Agent</text>
+
+      <!-- Main headline - Evaluation -->
+      <text
+        x="80"
+        y="490"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="100"
+        font-weight="700"
+        fill="${COLORS.foreground}"
+        letter-spacing="-0.04em"
+      >Evaluation</text>
+
+      <!-- Tagline italic -->
+      <text
+        x="80"
+        y="${height - 100}"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="16"
+        font-style="italic"
+        fill="${COLORS.foregroundMuted}"
+      >A Testing Framework for AI Agents &amp; LLM-Powered Systems</text>
+
+      <!-- Bottom decorative elements -->
+      <rect x="80" y="${height - 60}" width="40" height="3" fill="${COLORS.foreground}"/>
+
+      <!-- Brand name bottom right -->
+      <text
+        x="${width - 80}"
+        y="${height - 60}"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="14"
+        font-weight="500"
+        fill="${COLORS.foregroundMuted}"
+        text-anchor="end"
+        letter-spacing="-0.02em"
       >cadence</text>
 
-      <!-- Tagline -->
-      <text
-        x="80"
-        y="${height / 2 + 40}"
-        font-family="system-ui, -apple-system, sans-serif"
-        font-size="24"
-        fill="${COLORS.foreground}"
-        opacity="0.6"
-        letter-spacing="0.02em"
-      >AI Agent Evaluation Platform</text>
+      <!-- Stats indicators -->
+      <g transform="translate(${width - 300}, 200)">
+        <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="700" fill="${COLORS.foreground}">10,000+</text>
+        <text x="0" y="20" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="${COLORS.foregroundMuted}" letter-spacing="0.1em">TESTS PER RUN</text>
 
-      <!-- Bottom accent line -->
-      <rect x="80" y="${height - 60}" width="120" height="3" fill="${COLORS.accent}" rx="1.5"/>
+        <text x="0" y="70" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="700" fill="${COLORS.foreground}">50x</text>
+        <text x="0" y="90" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="${COLORS.foregroundMuted}" letter-spacing="0.1em">PARALLEL SESSIONS</text>
+      </g>
     </svg>
   `;
 
@@ -78,22 +144,28 @@ async function generateOGImage(
 }
 
 async function generateFavicon() {
-  // Simple "C" mark favicon
-  const createFaviconSvg = (size: number) => `
+  // Minimalist square mark favicon (matching the logo mark on landing)
+  const createFaviconSvg = (size: number) => {
+    const padding = Math.floor(size * 0.2);
+    const squareSize = Math.floor(size * 0.35);
+    return `
     <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="${COLORS.background}" rx="${size * 0.15}"/>
+      <rect width="100%" height="100%" fill="${COLORS.background}"/>
+      <!-- Simple "c" letterform -->
       <text
         x="50%"
-        y="50%"
+        y="54%"
         dominant-baseline="central"
         text-anchor="middle"
         font-family="system-ui, -apple-system, sans-serif"
-        font-size="${size * 0.6}"
+        font-size="${size * 0.65}"
         font-weight="700"
         fill="${COLORS.foreground}"
+        letter-spacing="-0.04em"
       >c</text>
     </svg>
   `;
+  };
 
   // Generate multiple sizes for ICO
   const sizes = [16, 32, 48];
@@ -114,7 +186,6 @@ async function generateFavicon() {
   writeFileSync(join(PUBLIC_DIR, "favicon.svg"), createFaviconSvg(32));
 
   // Generate ICO (use 32x32 as primary)
-  // ICO format header
   const icoHeader = Buffer.alloc(6);
   icoHeader.writeUInt16LE(0, 0); // Reserved
   icoHeader.writeUInt16LE(1, 2); // ICO type
@@ -155,13 +226,14 @@ async function generateAppleIcon() {
       <rect width="100%" height="100%" fill="${COLORS.background}"/>
       <text
         x="50%"
-        y="50%"
+        y="54%"
         dominant-baseline="central"
         text-anchor="middle"
         font-family="system-ui, -apple-system, sans-serif"
-        font-size="${size * 0.5}"
+        font-size="${size * 0.55}"
         font-weight="700"
         fill="${COLORS.foreground}"
+        letter-spacing="-0.04em"
       >c</text>
     </svg>
   `;
@@ -172,7 +244,7 @@ async function generateAppleIcon() {
 }
 
 async function main() {
-  console.log("\n🎨 Generating brand assets for Cadence...\n");
+  console.log("\n🎨 Generating brand assets for Cadence (Neo-Brutalist style)...\n");
 
   await generateOGImage(1200, 630, "og.png");
   await generateOGImage(1200, 600, "og-twitter.png");
