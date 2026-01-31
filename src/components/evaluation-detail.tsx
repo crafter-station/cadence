@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   useEvaluation,
   useStartEvaluation,
@@ -227,7 +226,7 @@ export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-auto">
         <div className="p-6">
           {activeTab === "epochs" && (
             <EpochList epochs={epochs} evaluationId={evaluationId} />
@@ -235,7 +234,7 @@ export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
           {activeTab === "metrics" && <EvaluationMetricsChart epochs={epochs} />}
           {activeTab === "prompts" && <PromptVersions epochs={epochs} />}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   )
 }
@@ -428,30 +427,48 @@ function PromptVersions({ epochs }: { epochs: any[] }) {
               </span>
             </div>
           </CardHeader>
-          <CardContent className="p-4">
-            {epoch.improvementApplied?.reasoning && (
-              <div className="mb-4">
-                <span className="text-xs text-muted-foreground block mb-1">
-                  Reasoning
+          <CardContent className="p-4 space-y-4">
+            {epoch.prompt?.content && (
+              <div>
+                <span className="text-xs text-muted-foreground block mb-1.5">
+                  Prompt Content
                 </span>
-                <p className="text-sm">{epoch.improvementApplied.reasoning}</p>
+                <pre className="text-sm bg-secondary/50 p-3 rounded-lg overflow-auto max-h-48 whitespace-pre-wrap font-mono text-xs">
+                  {epoch.prompt.content}
+                </pre>
+              </div>
+            )}
+            {epoch.improvementApplied?.reasoning && (
+              <div>
+                <span className="text-xs text-muted-foreground block mb-1">
+                  Optimization Reasoning
+                </span>
+                <p className="text-sm bg-chart-2/5 p-3 rounded-lg border border-chart-2/20">
+                  {epoch.improvementApplied.reasoning}
+                </p>
               </div>
             )}
             {epoch.improvementApplied?.changes?.length > 0 && (
               <div>
                 <span className="text-xs text-muted-foreground block mb-1.5">
-                  Changes
+                  Changes Applied
                 </span>
-                <ul className="list-disc list-inside space-y-1">
+                <ul className="space-y-1.5">
                   {epoch.improvementApplied.changes.map(
                     (change: string, i: number) => (
-                      <li key={i} className="text-sm">
-                        {change}
+                      <li key={i} className="text-sm flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-chart-2 shrink-0 mt-0.5" />
+                        <span>{change}</span>
                       </li>
                     )
                   )}
                 </ul>
               </div>
+            )}
+            {!epoch.prompt?.content && !epoch.improvementApplied?.reasoning && (
+              <p className="text-sm text-muted-foreground">
+                No changes recorded for this epoch.
+              </p>
             )}
           </CardContent>
         </Card>
