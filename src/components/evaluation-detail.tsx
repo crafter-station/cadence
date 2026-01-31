@@ -15,7 +15,9 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
+import { AudioPlayer } from "@/components/ui/audio-player"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -250,6 +252,21 @@ export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
                   <div className="text-lg font-semibold">{selectedSession.avgLatency?.toFixed(0) ?? "—"}ms</div>
                   <div className="text-xs text-muted-foreground">Latency</div>
                 </div>
+              </div>
+
+              {/* Audio Player */}
+              <div className="px-4 py-3 border-b border-border">
+                {selectedSession.audioUrl ? (
+                  <AudioPlayer 
+                    url={selectedSession.audioUrl} 
+                    duration={selectedSession.audioDurationSeconds} 
+                  />
+                ) : (
+                  <div className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg text-muted-foreground text-sm">
+                    <Play className="h-4 w-4" />
+                    <span>Audio recording will be available when call completes</span>
+                  </div>
+                )}
               </div>
 
               {/* Transcript */}
