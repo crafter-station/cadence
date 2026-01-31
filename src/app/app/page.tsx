@@ -4,7 +4,22 @@ import { useState, useCallback, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useUser } from "@clerk/nextjs"
-import { Play, Settings2, Zap, Target, Sparkles, Plus, X, FileText, ChevronDown, ExternalLink } from "lucide-react"
+import {
+  Play,
+  Settings2,
+  Zap,
+  Target,
+  Sparkles,
+  Plus,
+  X,
+  FileText,
+  ChevronDown,
+  ExternalLink,
+  RefreshCw,
+  Bot,
+  Cpu,
+  Mic,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -27,6 +42,10 @@ import { PersonalityGrid } from "@/components/personality-grid"
 import { usePersonalities } from "@/hooks/use-personalities"
 import { usePrompts, useCreatePromptVersion } from "@/hooks/use-prompts"
 import { useCreateEvaluation, useStartEvaluation } from "@/hooks/use-evaluations"
+import {
+  useExternalAgentByPromptId,
+  useSyncExternalAgent,
+} from "@/hooks/use-external-agents"
 import type { Personality } from "@/lib/types"
 
 const TARGET_METRICS = [
@@ -74,6 +93,13 @@ export default function EvaluationPage() {
   const createEvaluation = useCreateEvaluation()
   const startEvaluation = useStartEvaluation()
   const createPromptVersion = useCreatePromptVersion()
+
+  // Check if selected prompt is from an external agent
+  const { data: externalAgent, isExternalAgent } = useExternalAgentByPromptId(
+    userId,
+    selectedPromptId
+  )
+  const syncAgent = useSyncExternalAgent()
 
   const personalities = useMemo<Personality[]>(() => {
     if (!backendPersonalities) return []
@@ -212,12 +238,21 @@ export default function EvaluationPage() {
                   <FileText className="h-4 w-4 text-muted-foreground" />
                   <h2 className="text-sm font-medium">Source Prompt</h2>
                 </div>
-                <Link href="/app/prompts">
-                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
-                    <ExternalLink className="w-3 h-3" />
-                    Manage
-                  </Button>
-                </Link>
+                {isExternalAgent && externalAgent ? (
+                  <Link href={`/app/agents/${externalAgent.id}`}>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                      <ExternalLink className="w-3 h-3" />
+                      Manage
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href="/app/prompts">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                      <ExternalLink className="w-3 h-3" />
+                      Manage
+                    </Button>
+                  </Link>
+                )}
               </CardHeader>
               <CardContent className="p-4 space-y-3">
                 <Select value={selectedPromptId} onValueChange={(id) => {
@@ -236,6 +271,59 @@ export default function EvaluationPage() {
                   </SelectContent>
                 </Select>
 
+                {/* External Agent Info */}
+                {isExternalAgent && externalAgent && (
+                  <div className="space-y-3 pt-3 border-t border-border">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bot className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Dapta Agent</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          syncAgent.mutate({ agentId: externalAgent.id, userId })
+                        }
+                        disabled={syncAgent.isPending}
+                        className="h-7 gap-1 text-xs"
+                      >
+                        <RefreshCw
+                          className={`h-3 w-3 ${syncAgent.isPending ? "animate-spin" : ""}`}
+                        />
+                        Sync
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {externalAgent.llmModel && (
+                        <div className="flex items-center gap-1.5">
+                          <Cpu className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Model:</span>
+                          <span className="font-mono">{externalAgent.llmModel}</span>
+                        </div>
+                      )}
+                      {externalAgent.voiceId && (
+                        <div className="flex items-center gap-1.5">
+                          <Mic className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Voice:</span>
+                          <span className="font-mono truncate max-w-[100px]">
+                            {externalAgent.voiceId.slice(0, 15)}...
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {externalAgent.lastSyncedAt && (
+                      <p className="text-xs text-muted-foreground">
+                        Last synced:{" "}
+                        {new Date(externalAgent.lastSyncedAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Prompt Preview & Editor */}
                 {activePrompt && (
                   <Collapsible open={showPromptPreview} onOpenChange={setShowPromptPreview}>
                     <CollapsibleTrigger asChild>
