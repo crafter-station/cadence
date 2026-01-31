@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { PromptDiffView } from "@/components/prompt-diff-view"
 import {
   useEvaluation,
   useStartEvaluation,
@@ -432,20 +433,13 @@ export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
                                   <ChevronRight className="w-3 h-3 transition-transform group-open:rotate-90" />
                                   View full prompt diff
                                 </summary>
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                    <div className="text-xs font-medium text-chart-3 mb-2">Original (v{epoch.epochNumber})</div>
-                                    <pre className="p-3 bg-chart-3/5 border border-chart-3/20 rounded-lg text-xs overflow-auto max-h-64 whitespace-pre-wrap">
-                                      {improvement.originalPrompt}
-                                    </pre>
-                                  </div>
-                                  <div>
-                                    <div className="text-xs font-medium text-chart-1 mb-2">Improved (v{epoch.epochNumber + 1})</div>
-                                    <pre className="p-3 bg-chart-1/5 border border-chart-1/20 rounded-lg text-xs overflow-auto max-h-64 whitespace-pre-wrap">
-                                      {improvement.improvedPrompt}
-                                    </pre>
-                                  </div>
-                                </div>
+                                <PromptDiffView
+                                  originalPrompt={improvement.originalPrompt}
+                                  improvedPrompt={improvement.improvedPrompt}
+                                  originalLabel={`v${epoch.epochNumber}`}
+                                  improvedLabel={`v${epoch.epochNumber + 1}`}
+                                  className="max-h-80"
+                                />
                               </details>
                             </div>
                           )}
