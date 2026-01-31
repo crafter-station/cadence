@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs"
 import {
   Play,
   FileText,
@@ -64,6 +65,22 @@ export function DashboardNav() {
 
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="font-mono">v1.5.0</span>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                  Sign In
+                </button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-7 h-7",
+                  },
+                }}
+              />
+            </SignedIn>
           </div>
         </div>
       </div>
