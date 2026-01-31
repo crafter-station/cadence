@@ -1,48 +1,43 @@
-import {
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { prompt } from "./prompt";
 
-// Store external agent imports (Dapta, etc.)
+// Store external agent connections (linked via URL params from Dapta)
 export const externalAgent = pgTable("external_agent", {
   id: text("id").primaryKey(),
   promptId: text("prompt_id")
     .notNull()
     .references(() => prompt.id),
+  userId: text("user_id").notNull(),
 
   // Source platform
-  source: text("source").notNull(), // "dapta", "retell", etc.
+  source: text("source").notNull().default("dapta"),
 
-  // Agent info
+  // Agent identification (from URL params)
   agentName: text("agent_name").notNull(),
-
-  // External IDs
-  externalAgentId: text("external_agent_id").notNull(),
+  daptaAgentId: text("dapta_agent_id").notNull(),
   retellAgentId: text("retell_agent_id"),
   llmId: text("llm_id"),
   voiceId: text("voice_id"),
 
-  // Organization
-  organizationId: text("organization_id"),
+  // API credentials
+  apiKey: text("api_key").notNull(),
+
+  // Configuration fetched from Dapta API
+  llmModel: text("llm_model"), // e.g., "GPT 4.1"
+  systemPrompt: text("system_prompt"), // Full instructions
+  inputVariables: jsonb("input_variables").$type<
+    Array<{ key: string; value: string }>
+  >(),
+
+  // Organization context
   workspaceId: text("workspace_id"),
+  organizationId: text("organization_id"),
 
-  // Configuration snapshot
-  llmModel: text("llm_model"),
-  inputVariables: jsonb("input_variables").$type<Record<string, string>>(),
-
-  // Raw payload for full reference
-  rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>(),
-
-  // Metadata
-  sourceUrl: text("source_url"),
-  extensionVersion: text("extension_version"),
-
-  importedAt: timestamp("imported_at").notNull().defaultNow(),
+  // Timestamps
+  lastSyncedAt: timestamp("last_synced_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export type ExternalAgentSelect = typeof externalAgent.$inferSelect;

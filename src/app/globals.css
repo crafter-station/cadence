@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import 'react-diff-view/style/index.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -122,4 +123,42 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* react-diff-view overrides */
+.diff-line-added,
+.diff-code-insert {
+  background-color: oklch(0.7 0.18 150 / 0.15);
+}
+
+.diff-line-removed,
+.diff-code-delete {
+  background-color: oklch(0.55 0.2 25 / 0.15);
+}
+
+.diff-gutter-insert {
+  background-color: oklch(0.7 0.18 150 / 0.25);
+}
+
+.diff-gutter-delete {
+  background-color: oklch(0.55 0.2 25 / 0.25);
+}
+
+.diff {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  background: var(--card);
+}
+
+.diff-hunk-header {
+  background-color: var(--secondary);
+  color: var(--muted-foreground);
+}
+
+.diff-gutter {
+  color: var(--muted-foreground);
+  background: var(--secondary);
+  min-width: 3rem;
+  text-align: right;
+  padding-right: 0.5rem;
 }

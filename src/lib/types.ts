@@ -6,6 +6,7 @@ export interface Personality {
   description: string
   traits: string[]
   color: string
+  systemPrompt?: string
 }
 
 export interface TestSession {

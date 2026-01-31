@@ -7,11 +7,11 @@ import { SelfHealingPanel } from "@/components/self-healing-panel"
 import { TestConfigPanel, type TestConfig } from "@/components/test-config-panel"
 import { BusinessOutcomesPanel } from "@/components/business-outcomes-panel"
 import { useState, useCallback, useEffect, useMemo } from "react"
+import { useUser } from "@clerk/nextjs"
 import { usePersonalities } from "@/hooks/use-personalities"
 import { useStartTestRun, useStopTestRun } from "@/hooks/use-test-runs"
 import { useRealtimeTestRun } from "@/hooks/use-realtime-test-run"
 import type { Personality, TestSession, TestStatus } from "@/lib/types"
-import { FALLBACK_PERSONALITIES } from "@/lib/types"
 
 const DEFAULT_CONFIG: TestConfig = {
   testsPerPersonality: {},
@@ -25,10 +25,12 @@ const DEFAULT_CONFIG: TestConfig = {
   },
 }
 
-const MOCK_USER_ID = "user_demo_123"
 const MOCK_PROMPT_ID = "prompt_demo_123"
 
 export default function EvaluationPage() {
+  const { user } = useUser()
+  const userId = user?.id
+
   const [sessions, setSessions] = useState<TestSession[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [selectedPersonalities, setSelectedPersonalities] = useState<string[]>([])
@@ -36,35 +38,20 @@ export default function EvaluationPage() {
   const [activeTab, setActiveTab] = useState<"config" | "metrics" | "healing" | "outcomes">("config")
   const [currentTestRunId, setCurrentTestRunId] = useState<string | null>(null)
   const [useSimulation, setUseSimulation] = useState(true)
-  const [customPersonalities, setCustomPersonalities] = useState<Personality[]>([])
 
-  const { data: backendPersonalities } = usePersonalities(MOCK_USER_ID)
-
-  const basePersonalities = useMemo<Personality[]>(() => {
-    if (backendPersonalities?.length) {
-      return backendPersonalities.map((p) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        traits: p.traits,
-        color: p.color,
-      }))
-    }
-    return FALLBACK_PERSONALITIES
-  }, [backendPersonalities])
+  const { data: backendPersonalities, isLoading: isLoadingPersonalities } = usePersonalities(userId)
 
   const personalities = useMemo<Personality[]>(() => {
-    // Merge base and custom, keeping original order for base items
-    const merged = basePersonalities.map((bp) => {
-      const customVersion = customPersonalities.find((cp) => cp.id === bp.id)
-      return customVersion || bp
-    })
-    // Add truly new custom personalities at the end
-    const newCustom = customPersonalities.filter(
-      (cp) => !basePersonalities.some((bp) => bp.id === cp.id)
-    )
-    return [...merged, ...newCustom]
-  }, [basePersonalities, customPersonalities])
+    if (!backendPersonalities) return []
+    return backendPersonalities.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      traits: p.traits,
+      color: p.color,
+      systemPrompt: p.systemPrompt ?? undefined,
+    }))
+  }, [backendPersonalities])
 
   const startTestRunMutation = useStartTestRun()
   const stopTestRunMutation = useStopTestRun()
@@ -103,12 +90,13 @@ export default function EvaluationPage() {
 
   const startTests = useCallback(async () => {
     if (selectedPersonalities.length === 0) return
+    if (!useSimulation && !userId) return
 
     setIsRunning(true)
 
-    if (!useSimulation) {
+    if (!useSimulation && userId) {
       const result = await startTestRunMutation.mutateAsync({
-        userId: MOCK_USER_ID,
+        userId,
         promptId: MOCK_PROMPT_ID,
         personalityIds: selectedPersonalities,
         config,
@@ -174,7 +162,7 @@ export default function EvaluationPage() {
         )
       }
     }
-  }, [selectedPersonalities, config, useSimulation, startTestRunMutation])
+  }, [selectedPersonalities, config, useSimulation, userId, startTestRunMutation])
 
   const simulateTest = (sessionId: string, delay: number) => {
     const baseDelay = delay
@@ -282,10 +270,10 @@ export default function EvaluationPage() {
   }
 
   const stopTests = useCallback(async () => {
-    if (!useSimulation && currentTestRunId) {
+    if (!useSimulation && currentTestRunId && userId) {
       await stopTestRunMutation.mutateAsync({
         testRunId: currentTestRunId,
-        userId: MOCK_USER_ID,
+        userId,
       })
     }
 
@@ -297,7 +285,7 @@ export default function EvaluationPage() {
         status: s.status === "running" ? "failed" : s.status,
       }))
     )
-  }, [useSimulation, currentTestRunId, stopTestRunMutation])
+  }, [useSimulation, currentTestRunId, userId, stopTestRunMutation])
 
   const togglePersonality = useCallback((id: string) => {
     setSelectedPersonalities((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
