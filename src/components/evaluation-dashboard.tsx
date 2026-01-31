@@ -51,15 +51,15 @@ export function EvaluationDashboard() {
       {/* Header */}
       <div className="border-b border-border px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold">Prompt Evaluations</h1>
+          <h1 className="text-lg font-semibold">Experiments</h1>
           <p className="text-sm text-muted-foreground">
-            Automated epoch-based prompt optimization campaigns
+            Automated epoch-based prompt optimization
           </p>
         </div>
         <Link href="/app/evaluations/new">
           <Button className="gap-2">
             <Plus className="h-4 w-4" />
-            New Evaluation
+            New Experiment
           </Button>
         </Link>
       </div>
@@ -71,7 +71,7 @@ export function EvaluationDashboard() {
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Target className="h-4 w-4" />
-                <span className="text-xs">Total Campaigns</span>
+                <span className="text-xs">Total Experiments</span>
               </div>
               <span className="text-2xl font-semibold">{stats.total}</span>
             </CardContent>
@@ -122,9 +122,9 @@ export function EvaluationDashboard() {
             ))
           ) : (
             <div className="text-center text-muted-foreground py-8">
-              <p>No evaluations yet.</p>
+              <p>No experiments yet.</p>
               <p className="text-sm mt-1">
-                Create your first evaluation to start optimizing prompts.
+                Create your first experiment to start optimizing prompts.
               </p>
             </div>
           )}

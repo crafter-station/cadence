@@ -17,7 +17,7 @@ import {
 
 const MODULES = [
   { id: "evaluation", href: "/app", label: "Evaluation", icon: Play },
-  { id: "evaluations", href: "/app/evaluations", label: "Campaigns", icon: Target },
+  { id: "evaluations", href: "/app/evaluations", label: "Experiments", icon: Target },
   { id: "prompts", href: "/app/prompts", label: "Prompts", icon: FileText },
   { id: "personas", href: "/app/personas", label: "Personas", icon: Users },
   { id: "scenarios", href: "/app/scenarios", label: "Scenarios", icon: FlaskConical },

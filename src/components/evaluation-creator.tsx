@@ -111,9 +111,9 @@ export function EvaluationCreator() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-lg font-semibold">Create Evaluation</h1>
+          <h1 className="text-lg font-semibold">Create Experiment</h1>
           <p className="text-sm text-muted-foreground">
-            Configure an epoch-based prompt optimization campaign
+            Configure an epoch-based prompt optimization
           </p>
         </div>
       </div>
@@ -373,7 +373,7 @@ export function EvaluationCreator() {
             onClick={handleSubmit}
             disabled={!isValid || createEvaluation.isPending}
           >
-            {createEvaluation.isPending ? "Creating..." : "Create Evaluation"}
+            {createEvaluation.isPending ? "Creating..." : "Create Experiment"}
           </Button>
         </div>
       </div>
