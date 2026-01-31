@@ -194,7 +194,15 @@ export async function getEvaluationAction(
       epochs: {
         with: {
           prompt: true,
-          testRun: true,
+          testRun: {
+            with: {
+              sessions: {
+                with: {
+                  personality: true,
+                },
+              },
+            },
+          },
           metrics: {
             with: {
               personality: true,

@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import {
   ArrowLeft,
@@ -11,12 +10,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  TrendingUp,
-  TrendingDown,
-  ChevronRight,
-  FileText,
-  BarChart3,
-  GitCompare,
+  MessageSquare,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -27,32 +22,22 @@ import {
   useStartEvaluation,
   usePauseEvaluation,
 } from "@/hooks/use-evaluations"
-import { EvaluationMetricsChart } from "@/components/evaluation-metrics-chart"
-
-const STATUS_CONFIG = {
-  pending: { icon: Clock, color: "text-muted-foreground", bg: "bg-muted/50" },
-  running: { icon: Play, color: "text-chart-2", bg: "bg-chart-2/10" },
-  paused: { icon: Pause, color: "text-chart-5", bg: "bg-chart-5/10" },
-  completed: { icon: CheckCircle, color: "text-chart-1", bg: "bg-chart-1/10" },
-  failed: { icon: XCircle, color: "text-chart-3", bg: "bg-chart-3/10" },
-}
 
 interface EvaluationDetailProps {
   evaluationId: string
 }
 
 export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
-  const router = useRouter()
   const { user } = useUser()
   const { data: evaluation, isLoading } = useEvaluation(evaluationId)
   const startEvaluation = useStartEvaluation()
   const pauseEvaluation = usePauseEvaluation()
-  const [activeTab, setActiveTab] = useState<"epochs" | "metrics" | "prompts">("epochs")
+  const [selectedSession, setSelectedSession] = useState<any>(null)
 
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
-        Loading evaluation...
+        Loading...
       </div>
     )
   }
@@ -60,15 +45,16 @@ export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
   if (!evaluation) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
-        Evaluation not found
+        Not found
       </div>
     )
   }
 
-  const status = STATUS_CONFIG[evaluation.status]
-  const StatusIcon = status.icon
   const config = evaluation.config
   const epochs = (evaluation as any).epochs ?? []
+  const currentEpoch = epochs.find((e: any) => e.status === "running") ?? epochs[epochs.length - 1]
+  const sessions = currentEpoch?.testRun?.sessions ?? []
+
   const progress = config?.maxEpochs
     ? (evaluation.currentEpochNumber / config.maxEpochs) * 100
     : 0
@@ -89,390 +75,228 @@ export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
     })
   }
 
+  const completedSessions = sessions.filter((s: any) => s.status === "completed").length
+  const runningSessions = sessions.filter((s: any) => s.status === "running").length
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="border-b border-border px-6 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-4">
-            <Link href="/app/evaluations">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-lg font-semibold">{evaluation.name}</h1>
-                <Badge
-                  variant="secondary"
-                  className={`${status.bg} ${status.color} border-0`}
-                >
-                  <StatusIcon className="h-3 w-3 mr-1" />
-                  {evaluation.status}
-                </Badge>
-              </div>
-              {evaluation.description && (
-                <p className="text-sm text-muted-foreground">
-                  {evaluation.description}
-                </p>
-              )}
+      <div className="border-b border-border px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/app/evaluations">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-lg font-semibold">{evaluation.name}</h1>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span>Epoch {evaluation.currentEpochNumber}/{config?.maxEpochs ?? "?"}</span>
+              <span>•</span>
+              <span className={evaluation.status === "running" ? "text-chart-2" : ""}>
+                {evaluation.status}
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {(evaluation.status === "pending" || evaluation.status === "paused") && (
-              <Button onClick={handleStart} className="gap-2">
-                <Play className="h-4 w-4" />
-                {evaluation.status === "paused" ? "Resume" : "Start"}
-              </Button>
-            )}
-            {evaluation.status === "running" && (
-              <Button onClick={handlePause} variant="secondary" className="gap-2">
-                <Pause className="h-4 w-4" />
-                Pause
-              </Button>
-            )}
-          </div>
         </div>
+        <div className="flex items-center gap-2">
+          {(evaluation.status === "pending" || evaluation.status === "paused") && (
+            <Button onClick={handleStart} className="gap-2">
+              <Play className="h-4 w-4" />
+              Start
+            </Button>
+          )}
+          {evaluation.status === "running" && (
+            <Button onClick={handlePause} variant="secondary" className="gap-2">
+              <Pause className="h-4 w-4" />
+              Pause
+            </Button>
+          )}
+        </div>
+      </div>
 
-        {/* Progress */}
-        <div className="flex items-center gap-4">
+      {/* Progress Bar */}
+      <div className="px-6 py-3 border-b border-border bg-secondary/20">
+        <div className="flex items-center gap-4 mb-2">
           <Progress value={progress} className="flex-1 h-2" />
-          <span className="text-sm text-muted-foreground font-mono">
-            Epoch {evaluation.currentEpochNumber}/{config?.maxEpochs ?? "?"}
+          <span className="text-sm font-mono text-muted-foreground">
+            {Math.round(progress)}%
           </span>
         </div>
+        {sessions.length > 0 && (
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-chart-2 animate-pulse" />
+              {runningSessions} running
+            </span>
+            <span className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-chart-1" />
+              {completedSessions} completed
+            </span>
+            <span>{sessions.length} total</span>
+          </div>
+        )}
       </div>
 
-      {/* Stats */}
-      <div className="border-b border-border px-6 py-4">
-        <div className="grid grid-cols-5 gap-4">
-          <Card className="border-none shadow-none bg-secondary/30">
-            <CardContent className="p-3">
-              <span className="text-xs text-muted-foreground block mb-0.5">
-                Target Metric
-              </span>
-              <span className="text-sm font-medium capitalize">
-                {config?.targetMetric ?? "accuracy"}
-              </span>
-            </CardContent>
-          </Card>
-          <Card className="border-none shadow-none bg-secondary/30">
-            <CardContent className="p-3">
-              <span className="text-xs text-muted-foreground block mb-0.5">
-                Best Accuracy
-              </span>
-              <span className="text-sm font-medium">
-                {evaluation.bestAccuracy?.toFixed(1) ?? "—"}%
-              </span>
-            </CardContent>
-          </Card>
-          <Card className="border-none shadow-none bg-secondary/30">
-            <CardContent className="p-3">
-              <span className="text-xs text-muted-foreground block mb-0.5">
-                Best Conversion
-              </span>
-              <span className="text-sm font-medium">
-                {evaluation.bestConversionRate?.toFixed(1) ?? "—"}%
-              </span>
-            </CardContent>
-          </Card>
-          <Card className="border-none shadow-none bg-chart-2/10">
-            <CardContent className="p-3">
-              <span className="text-xs text-chart-2 block mb-0.5">
-                Total Improvement
-              </span>
-              <span className="text-sm font-medium text-chart-2">
-                {evaluation.totalImprovement != null
-                  ? `+${evaluation.totalImprovement.toFixed(1)}%`
-                  : "—"}
-              </span>
-            </CardContent>
-          </Card>
-          <Card className="border-none shadow-none bg-secondary/30">
-            <CardContent className="p-3">
-              <span className="text-xs text-muted-foreground block mb-0.5">
-                Tests/Epoch
-              </span>
-              <span className="text-sm font-medium">
-                {config?.testsPerEpoch ?? "—"}
-              </span>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="border-b border-border px-6">
-        <div className="flex gap-1">
-          {[
-            { id: "epochs", label: "Epochs", icon: Clock },
-            { id: "metrics", label: "Metrics", icon: BarChart3 },
-            { id: "prompts", label: "Prompt Versions", icon: GitCompare },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? "border-primary text-foreground font-medium"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-6">
-          {activeTab === "epochs" && (
-            <EpochList epochs={epochs} evaluationId={evaluationId} />
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sessions Grid */}
+        <div className="flex-1 overflow-auto p-4">
+          {sessions.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <p>No sessions yet</p>
+                <p className="text-sm mt-1">Start the evaluation to see sessions</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {sessions.map((session: any) => (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  onClick={() => setSelectedSession(session)}
+                  isSelected={selectedSession?.id === session.id}
+                />
+              ))}
+            </div>
           )}
-          {activeTab === "metrics" && <EvaluationMetricsChart epochs={epochs} />}
-          {activeTab === "prompts" && <PromptVersions epochs={epochs} />}
         </div>
-      </div>
-    </div>
-  )
-}
 
-function EpochList({
-  epochs,
-  evaluationId,
-}: {
-  epochs: any[]
-  evaluationId: string
-}) {
-  if (epochs.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-8">
-        <p>No epochs yet.</p>
-        <p className="text-sm mt-1">Start the evaluation to begin optimization.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-3">
-      {epochs.map((epoch: any) => (
-        <Link
-          key={epoch.id}
-          href={`/app/evaluations/${evaluationId}?epoch=${epoch.id}`}
-        >
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="font-mono">
-                      Epoch {epoch.epochNumber}
-                    </Badge>
-                    <Badge
-                      variant={
-                        epoch.status === "completed"
-                          ? "secondary"
-                          : epoch.status === "running"
-                            ? "default"
-                            : "outline"
-                      }
-                      className={
-                        epoch.status === "completed"
-                          ? "bg-chart-1/10 text-chart-1 border-0"
-                          : epoch.status === "running"
-                            ? "bg-chart-2/10 text-chart-2 border-0"
-                            : ""
-                      }
-                    >
-                      {epoch.status}
-                    </Badge>
-                    {epoch.isAccepted && (
-                      <Badge className="bg-chart-2/10 text-chart-2 border-0">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Accepted
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-6">
-                  <div className="text-right">
-                    <span className="text-xs text-muted-foreground block">
-                      Accuracy
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium">
-                        {epoch.accuracy?.toFixed(1) ?? "—"}%
-                      </span>
-                      {epoch.accuracyDelta != null && epoch.accuracyDelta !== 0 && (
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${
-                            epoch.accuracyDelta > 0
-                              ? "text-chart-2 border-chart-2/30"
-                              : "text-chart-3 border-chart-3/30"
-                          }`}
-                        >
-                          {epoch.accuracyDelta > 0 ? (
-                            <TrendingUp className="h-3 w-3 mr-0.5" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3 mr-0.5" />
-                          )}
-                          {Math.abs(epoch.accuracyDelta).toFixed(1)}%
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs text-muted-foreground block">
-                      Conversion
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium">
-                        {epoch.conversionRate?.toFixed(1) ?? "—"}%
-                      </span>
-                      {epoch.conversionDelta != null && epoch.conversionDelta !== 0 && (
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${
-                            epoch.conversionDelta > 0
-                              ? "text-chart-2 border-chart-2/30"
-                              : "text-chart-3 border-chart-3/30"
-                          }`}
-                        >
-                          {epoch.conversionDelta > 0 ? (
-                            <TrendingUp className="h-3 w-3 mr-0.5" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3 mr-0.5" />
-                          )}
-                          {Math.abs(epoch.conversionDelta).toFixed(1)}%
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </div>
-              {epoch.improvementApplied?.changes?.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-border">
-                  <span className="text-xs text-muted-foreground block mb-1.5">
-                    Changes Applied
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {epoch.improvementApplied.changes.slice(0, 3).map(
-                      (change: string, i: number) => (
-                        <Badge key={i} variant="outline" className="text-xs">
-                          {change.slice(0, 50)}
-                          {change.length > 50 ? "..." : ""}
-                        </Badge>
-                      )
-                    )}
-                    {epoch.improvementApplied.changes.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{epoch.improvementApplied.changes.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </Link>
-      ))}
-    </div>
-  )
-}
-
-function PromptVersions({ epochs }: { epochs: any[] }) {
-  const completedEpochs = epochs.filter((e) => e.status === "completed")
-
-  if (completedEpochs.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-8">
-        <p>No prompt versions yet.</p>
-        <p className="text-sm mt-1">
-          Prompt versions are created after each epoch completes.
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      {completedEpochs.map((epoch: any, index: number) => (
-        <Card key={epoch.id}>
-          <CardHeader className="px-4 py-3 border-b border-border flex flex-row items-center justify-between space-y-0">
-            <div className="flex items-center gap-3">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">
-                v{epoch.prompt?.version ?? index + 1}
-              </span>
-              <Badge variant="outline" className="text-xs font-mono">
-                Epoch {epoch.epochNumber}
-              </Badge>
-              {epoch.isAccepted && (
-                <Badge className="bg-chart-2/10 text-chart-2 border-0 text-xs">
-                  Best Version
+        {/* Session Detail Panel */}
+        {selectedSession && (
+          <div className="w-96 border-l border-border flex flex-col bg-card">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <div>
+                <h3 className="font-medium">{selectedSession.personality?.name}</h3>
+                <Badge
+                  variant="outline"
+                  className={`text-xs mt-1 ${
+                    selectedSession.status === "completed" ? "text-chart-1 border-chart-1/30" :
+                    selectedSession.status === "running" ? "text-chart-2 border-chart-2/30" :
+                    ""
+                  }`}
+                >
+                  {selectedSession.status}
                 </Badge>
-              )}
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedSession(null)}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-muted-foreground">
-                Accuracy: <strong>{epoch.accuracy?.toFixed(1) ?? "—"}%</strong>
-              </span>
-              <span className="text-muted-foreground">
-                Conversion:{" "}
-                <strong>{epoch.conversionRate?.toFixed(1) ?? "—"}%</strong>
-              </span>
+
+            {/* Metrics */}
+            <div className="px-4 py-3 border-b border-border grid grid-cols-3 gap-2 text-center">
+              <div>
+                <div className="text-lg font-semibold">{selectedSession.accuracy?.toFixed(0) ?? "—"}%</div>
+                <div className="text-xs text-muted-foreground">Accuracy</div>
+              </div>
+              <div>
+                <div className="text-lg font-semibold">{selectedSession.turns ?? 0}</div>
+                <div className="text-xs text-muted-foreground">Turns</div>
+              </div>
+              <div>
+                <div className="text-lg font-semibold">{selectedSession.avgLatency?.toFixed(0) ?? "—"}ms</div>
+                <div className="text-xs text-muted-foreground">Latency</div>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            {epoch.prompt?.content && (
-              <div>
-                <span className="text-xs text-muted-foreground block mb-1.5">
-                  Prompt Content
-                </span>
-                <pre className="text-sm bg-secondary/50 p-3 rounded-lg overflow-auto max-h-48 whitespace-pre-wrap font-mono text-xs">
-                  {epoch.prompt.content}
-                </pre>
+
+            {/* Transcript */}
+            <div className="flex-1 overflow-auto">
+              <div className="p-4 space-y-3">
+                {selectedSession.transcript?.length > 0 ? (
+                  selectedSession.transcript.map((msg: any, i: number) => (
+                    <div key={i} className={`flex gap-3 ${msg.role === "agent" ? "flex-row-reverse" : ""}`}>
+                      <div
+                        className={`max-w-[80%] p-3 rounded-lg text-sm ${
+                          msg.role === "user"
+                            ? "bg-secondary"
+                            : "bg-primary text-primary-foreground"
+                        }`}
+                      >
+                        <div className="text-xs opacity-70 mb-1 uppercase">
+                          {msg.role}
+                        </div>
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-muted-foreground text-sm py-8">
+                    No messages yet
+                  </div>
+                )}
               </div>
-            )}
-            {epoch.improvementApplied?.reasoning && (
-              <div>
-                <span className="text-xs text-muted-foreground block mb-1">
-                  Optimization Reasoning
-                </span>
-                <p className="text-sm bg-chart-2/5 p-3 rounded-lg border border-chart-2/20">
-                  {epoch.improvementApplied.reasoning}
-                </p>
-              </div>
-            )}
-            {epoch.improvementApplied?.changes?.length > 0 && (
-              <div>
-                <span className="text-xs text-muted-foreground block mb-1.5">
-                  Changes Applied
-                </span>
-                <ul className="space-y-1.5">
-                  {epoch.improvementApplied.changes.map(
-                    (change: string, i: number) => (
-                      <li key={i} className="text-sm flex items-start gap-2">
-                        <CheckCircle className="h-4 w-4 text-chart-2 shrink-0 mt-0.5" />
-                        <span>{change}</span>
-                      </li>
-                    )
-                  )}
-                </ul>
-              </div>
-            )}
-            {!epoch.prompt?.content && !epoch.improvementApplied?.reasoning && (
-              <p className="text-sm text-muted-foreground">
-                No changes recorded for this epoch.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Epochs List at Bottom */}
+      {epochs.length > 0 && (
+        <div className="border-t border-border px-6 py-3">
+          <div className="flex items-center gap-2 overflow-auto">
+            <span className="text-xs text-muted-foreground shrink-0">Epochs:</span>
+            {epochs.map((epoch: any) => (
+              <Badge
+                key={epoch.id}
+                variant={epoch.status === "completed" ? "secondary" : "outline"}
+                className={`shrink-0 ${
+                  epoch.status === "running" ? "bg-chart-2/10 text-chart-2 border-chart-2/30" :
+                  epoch.isAccepted ? "bg-chart-1/10 text-chart-1" : ""
+                }`}
+              >
+                E{epoch.epochNumber}
+                {epoch.accuracy != null && ` • ${epoch.accuracy.toFixed(0)}%`}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+function SessionCard({ session, onClick, isSelected }: {
+  session: any
+  onClick: () => void
+  isSelected: boolean
+}) {
+  const statusColor =
+    session.status === "completed" ? "bg-chart-1" :
+    session.status === "running" ? "bg-chart-2 animate-pulse" :
+    session.status === "failed" ? "bg-chart-3" :
+    "bg-muted"
+
+  return (
+    <Card
+      className={`cursor-pointer transition-all hover:border-primary/50 ${
+        isSelected ? "border-primary ring-1 ring-primary" : ""
+      }`}
+      onClick={onClick}
+    >
+      <CardContent className="p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <div className={`w-2 h-2 rounded-full ${statusColor}`} />
+          <span className="text-sm font-medium truncate">
+            {session.personality?.name ?? "Unknown"}
+          </span>
+        </div>
+
+        <Progress value={session.progress ?? 0} className="h-1 mb-2" />
+
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{session.turns ?? 0} turns</span>
+          <span>{session.accuracy?.toFixed(0) ?? "—"}%</span>
+        </div>
+
+        {session.transcript?.length > 0 && (
+          <div className="mt-2 text-xs text-muted-foreground truncate">
+            <MessageSquare className="w-3 h-3 inline mr-1" />
+            {session.transcript[session.transcript.length - 1]?.content?.slice(0, 30)}...
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

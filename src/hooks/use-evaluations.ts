@@ -30,9 +30,12 @@ export function useEvaluation(evaluationId: string | null) {
     enabled: !!evaluationId,
     refetchInterval: (query) => {
       const data = query.state.data as EvaluationSelect | null;
-      // Refetch every 3 seconds while running
-      if (data?.status === "running" || data?.status === "pending") {
-        return 3000;
+      // Refetch every 1 second while running for real-time feel
+      if (data?.status === "running") {
+        return 1000;
+      }
+      if (data?.status === "pending") {
+        return 2000;
       }
       return false;
     },
@@ -132,8 +135,9 @@ export function useStartEvaluation() {
       evaluationId: string;
       userId: string;
     }) => startEvaluationAction(evaluationId, userId),
-    onSuccess: (_result, { userId }) => {
+    onSuccess: (_result, { evaluationId, userId }) => {
       queryClient.invalidateQueries({ queryKey: ["evaluations", userId] });
+      queryClient.invalidateQueries({ queryKey: ["evaluation", evaluationId] });
     },
   });
 }
@@ -149,8 +153,9 @@ export function usePauseEvaluation() {
       evaluationId: string;
       userId: string;
     }) => pauseEvaluationAction(evaluationId, userId),
-    onSuccess: (_result, { userId }) => {
+    onSuccess: (_result, { evaluationId, userId }) => {
       queryClient.invalidateQueries({ queryKey: ["evaluations", userId] });
+      queryClient.invalidateQueries({ queryKey: ["evaluation", evaluationId] });
     },
   });
 }
