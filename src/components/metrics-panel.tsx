@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import type { TestSession, Personality } from "@/app/page"
+import type { TestSession, Personality } from "@/lib/types"
 import { BarChart3, Clock, AlertTriangle, CheckCircle2, Activity } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEffect, useState } from "react"

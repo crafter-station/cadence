@@ -1,6 +1,6 @@
 "use client"
 
-import type { TestSession, Personality } from "@/app/page"
+import type { TestSession, Personality } from "@/lib/types"
 import type { TestConfig } from "@/components/test-config-panel"
 import {
   TrendingUp,

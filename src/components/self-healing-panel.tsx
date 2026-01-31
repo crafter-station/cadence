@@ -1,6 +1,6 @@
 "use client"
 
-import type { TestSession, Personality } from "@/app/page"
+import type { TestSession, Personality } from "@/lib/types"
 import { 
   Sparkles, 
   AlertCircle, 

@@ -1,6 +1,6 @@
 "use client"
 
-import type { Personality } from "@/app/page"
+import type { Personality } from "@/lib/types"
 import { Settings, TrendingUp, DollarSign, Clock, Target, Users, Zap } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

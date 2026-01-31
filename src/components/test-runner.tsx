@@ -1,6 +1,6 @@
 "use client"
 
-import type { TestSession, Personality } from "@/app/page"
+import type { TestSession, Personality } from "@/lib/types"
 import { Play, Square, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"

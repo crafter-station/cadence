@@ -1,6 +1,6 @@
 "use client"
 
-import type { Personality } from "@/app/page"
+import type { Personality } from "@/lib/types"
 import { Users, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
