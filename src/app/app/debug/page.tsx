@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { DebugConsole } from "@/components/debug-console"
+import { ComingSoon } from "@/components/coming-soon"
 
 export const metadata: Metadata = {
   title: "Debug | Cadence",
@@ -9,7 +9,10 @@ export const metadata: Metadata = {
 export default function DebugPage() {
   return (
     <div className="h-[calc(100vh-57px)]">
-      <DebugConsole />
+      <ComingSoon
+        title="Debug Console"
+        description="Advanced debugging tools for troubleshooting conversations, viewing logs, and analyzing agent behavior."
+      />
     </div>
   )
 }

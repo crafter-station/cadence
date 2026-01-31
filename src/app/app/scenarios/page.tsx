@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { ScenarioBuilder } from "@/components/scenario-builder"
+import { ComingSoon } from "@/components/coming-soon"
 
 export const metadata: Metadata = {
   title: "Scenarios | Cadence",
@@ -9,7 +9,10 @@ export const metadata: Metadata = {
 export default function ScenariosPage() {
   return (
     <div className="h-[calc(100vh-57px)]">
-      <ScenarioBuilder />
+      <ComingSoon
+        title="Scenarios"
+        description="Create and manage test scenarios with custom conversation flows and edge cases."
+      />
     </div>
   )
 }

@@ -29,6 +29,19 @@ const TARGET_METRICS = [
   { value: "latency", label: "Latency", description: "Optimize for response speed" },
 ]
 
+const PREDEFINED_GOALS = [
+  { label: "Schedule Demo", value: "Schedule a demo" },
+  { label: "Book Meeting", value: "Book a meeting" },
+  { label: "Collect Email", value: "Collect email address" },
+  { label: "Sign Up", value: "Complete sign up" },
+  { label: "Purchase", value: "Complete purchase" },
+  { label: "Upgrade Plan", value: "Upgrade subscription" },
+  { label: "Get Quote", value: "Request a quote" },
+  { label: "Contact Sales", value: "Contact sales team" },
+  { label: "Download", value: "Download resource" },
+  { label: "Start Trial", value: "Start free trial" },
+]
+
 export default function EvaluationPage() {
   const router = useRouter()
   const { user } = useUser()
@@ -213,38 +226,73 @@ export default function EvaluationPage() {
                   <Sparkles className="h-4 w-4 text-muted-foreground" />
                   <h2 className="text-sm font-medium">Conversion Goals</h2>
                 </CardHeader>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex gap-2">
-                    <Input
-                      value={newGoal}
-                      onChange={(e) => setNewGoal(e.target.value)}
-                      placeholder="e.g., Schedule a demo"
-                      onKeyDown={(e) => e.key === "Enter" && addGoal()}
-                    />
-                    <Button onClick={addGoal} size="sm">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {conversionGoals.length > 0 && (
+                <CardContent className="p-4 space-y-4">
+                  {/* Predefined Goals */}
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-2">Quick select</div>
                     <div className="flex flex-wrap gap-2">
-                      {conversionGoals.map((goal) => (
-                        <Badge key={goal} variant="secondary" className="gap-1 pr-1">
-                          {goal}
+                      {PREDEFINED_GOALS.map((goal) => {
+                        const isSelected = conversionGoals.includes(goal.value)
+                        return (
                           <button
-                            onClick={() => removeGoal(goal)}
-                            className="ml-1 hover:text-destructive"
+                            key={goal.value}
+                            onClick={() => {
+                              if (isSelected) {
+                                removeGoal(goal.value)
+                              } else {
+                                setConversionGoals([...conversionGoals, goal.value])
+                              }
+                            }}
+                            className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "border-border hover:border-primary/50 hover:bg-secondary/50"
+                            }`}
                           >
-                            <X className="h-3 w-3" />
+                            {goal.label}
                           </button>
-                        </Badge>
-                      ))}
+                        )
+                      })}
                     </div>
-                  )}
-                  {conversionGoals.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Add goals to track, like "Schedule demo", "Collect email", or
-                      "Complete purchase"
-                    </p>
+                  </div>
+
+                  {/* Custom Goal Input */}
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-2">Or add custom</div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newGoal}
+                        onChange={(e) => setNewGoal(e.target.value)}
+                        placeholder="Enter custom goal..."
+                        onKeyDown={(e) => e.key === "Enter" && addGoal()}
+                        className="text-sm"
+                      />
+                      <Button onClick={addGoal} size="sm" variant="outline">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Selected Goals Summary */}
+                  {conversionGoals.length > 0 && (
+                    <div className="pt-3 border-t border-border">
+                      <div className="text-xs text-muted-foreground mb-2">
+                        Selected ({conversionGoals.length})
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {conversionGoals.map((goal) => (
+                          <Badge key={goal} variant="secondary" className="gap-1 pr-1">
+                            {goal}
+                            <button
+                              onClick={() => removeGoal(goal)}
+                              className="ml-1 hover:text-destructive"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>

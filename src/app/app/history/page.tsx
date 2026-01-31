@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { TestHistory } from "@/components/test-history"
+import { ComingSoon } from "@/components/coming-soon"
 
 export const metadata: Metadata = {
   title: "History | Cadence",
@@ -9,7 +9,10 @@ export const metadata: Metadata = {
 export default function HistoryPage() {
   return (
     <div className="h-[calc(100vh-57px)]">
-      <TestHistory />
+      <ComingSoon
+        title="History"
+        description="View detailed history of all your past test runs, compare results, and track performance trends."
+      />
     </div>
   )
 }
