@@ -1,0 +1,15 @@
+
+    <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100%" height="100%" fill="#141211" rx="4.8"/>
+      <text
+        x="50%"
+        y="50%"
+        dominant-baseline="central"
+        text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="19.2"
+        font-weight="700"
+        fill="#faf9f8"
+      >c</text>
+    </svg>
+  
