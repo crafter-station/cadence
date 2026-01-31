@@ -26,9 +26,12 @@ export function useTestRun(testRunId: string | null) {
     enabled: !!testRunId,
     refetchInterval: (query) => {
       const data = query.state.data as TestRunSelect | null;
-      // Refetch every 2 seconds while running
-      if (data?.status === "running" || data?.status === "pending") {
-        return 2000;
+      // Refetch every 1 second while running for real-time feel
+      if (data?.status === "running") {
+        return 1000;
+      }
+      if (data?.status === "pending") {
+        return 1500;
       }
       return false;
     },
