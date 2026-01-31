@@ -16,3 +16,11 @@ export const ExperimentStatusEnum = pgEnum("experiment_status_enum", [
 ]);
 
 export const MessageRoleEnum = pgEnum("message_role_enum", ["user", "agent"]);
+
+export const EvaluationStatusEnum = pgEnum("evaluation_status_enum", [
+  "pending",
+  "running",
+  "paused",
+  "completed",
+  "failed",
+]);

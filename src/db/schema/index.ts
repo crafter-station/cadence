@@ -11,6 +11,10 @@ export * from "./scenario";
 export * from "./experiment";
 export * from "./healing-suggestion";
 export * from "./external-agent";
+export * from "./evaluation";
+export * from "./evaluation-epoch";
+export * from "./evaluation-metrics";
+export * from "./simulation-snapshot";
 
 // Relations
 export * from "./relations";

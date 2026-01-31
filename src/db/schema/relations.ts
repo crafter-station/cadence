@@ -9,6 +9,10 @@ import { scenario, scenarioStep } from "./scenario";
 import { experiment, experimentVariant } from "./experiment";
 import { healingSuggestion } from "./healing-suggestion";
 import { externalAgent } from "./external-agent";
+import { evaluation } from "./evaluation";
+import { evaluationEpoch } from "./evaluation-epoch";
+import { evaluationMetrics } from "./evaluation-metrics";
+import { simulationSnapshot } from "./simulation-snapshot";
 
 export const promptRelations = relations(prompt, ({ one, many }) => ({
   parent: one(prompt, {
@@ -24,6 +28,9 @@ export const promptRelations = relations(prompt, ({ one, many }) => ({
     fields: [prompt.id],
     references: [externalAgent.promptId],
   }),
+  evaluationsAsSource: many(evaluation, { relationName: "evaluationSource" }),
+  evaluationsAsBest: many(evaluation, { relationName: "evaluationBest" }),
+  evaluationEpochs: many(evaluationEpoch),
 }));
 
 export const personalityRelations = relations(personality, ({ many }) => ({
@@ -31,6 +38,7 @@ export const personalityRelations = relations(personality, ({ many }) => ({
   scenarioSteps: many(scenarioStep),
   healingSuggestions: many(healingSuggestion),
   versions: many(personalityVersion),
+  evaluationMetrics: many(evaluationMetrics),
 }));
 
 export const personalityVersionRelations = relations(
@@ -58,9 +66,10 @@ export const testRunRelations = relations(testRun, ({ one, many }) => ({
   }),
   sessions: many(testSession),
   healingSuggestions: many(healingSuggestion),
+  evaluationEpochs: many(evaluationEpoch),
 }));
 
-export const testSessionRelations = relations(testSession, ({ one }) => ({
+export const testSessionRelations = relations(testSession, ({ one, many }) => ({
   testRun: one(testRun, {
     fields: [testSession.testRunId],
     references: [testRun.id],
@@ -69,6 +78,7 @@ export const testSessionRelations = relations(testSession, ({ one }) => ({
     fields: [testSession.personalityId],
     references: [personality.id],
   }),
+  simulationSnapshots: many(simulationSnapshot),
 }));
 
 export const scenarioRelations = relations(scenario, ({ many }) => ({
@@ -138,3 +148,71 @@ export const externalAgentRelations = relations(externalAgent, ({ one }) => ({
     references: [prompt.id],
   }),
 }));
+
+// Evaluation relations
+export const evaluationRelations = relations(evaluation, ({ one, many }) => ({
+  sourcePrompt: one(prompt, {
+    fields: [evaluation.sourcePromptId],
+    references: [prompt.id],
+    relationName: "evaluationSource",
+  }),
+  bestPrompt: one(prompt, {
+    fields: [evaluation.bestPromptId],
+    references: [prompt.id],
+    relationName: "evaluationBest",
+  }),
+  epochs: many(evaluationEpoch),
+}));
+
+export const evaluationEpochRelations = relations(
+  evaluationEpoch,
+  ({ one, many }) => ({
+    evaluation: one(evaluation, {
+      fields: [evaluationEpoch.evaluationId],
+      references: [evaluation.id],
+    }),
+    prompt: one(prompt, {
+      fields: [evaluationEpoch.promptId],
+      references: [prompt.id],
+    }),
+    previousEpoch: one(evaluationEpoch, {
+      fields: [evaluationEpoch.previousEpochId],
+      references: [evaluationEpoch.id],
+      relationName: "epochChain",
+    }),
+    testRun: one(testRun, {
+      fields: [evaluationEpoch.testRunId],
+      references: [testRun.id],
+    }),
+    metrics: many(evaluationMetrics),
+    snapshots: many(simulationSnapshot),
+  })
+);
+
+export const evaluationMetricsRelations = relations(
+  evaluationMetrics,
+  ({ one }) => ({
+    epoch: one(evaluationEpoch, {
+      fields: [evaluationMetrics.epochId],
+      references: [evaluationEpoch.id],
+    }),
+    personality: one(personality, {
+      fields: [evaluationMetrics.personalityId],
+      references: [personality.id],
+    }),
+  })
+);
+
+export const simulationSnapshotRelations = relations(
+  simulationSnapshot,
+  ({ one }) => ({
+    epoch: one(evaluationEpoch, {
+      fields: [simulationSnapshot.epochId],
+      references: [evaluationEpoch.id],
+    }),
+    testSession: one(testSession, {
+      fields: [simulationSnapshot.testSessionId],
+      references: [testSession.id],
+    }),
+  })
+);
