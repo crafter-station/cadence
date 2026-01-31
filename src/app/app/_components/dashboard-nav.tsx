@@ -16,12 +16,12 @@ import {
 
 const MODULES = [
   { id: "evaluation", href: "/app", label: "Evaluation", icon: Play },
-  { id: "prompts", href: "/prompts", label: "Prompts", icon: FileText },
-  { id: "personas", href: "/personas", label: "Personas", icon: Users },
-  { id: "scenarios", href: "/scenarios", label: "Scenarios", icon: FlaskConical },
-  { id: "ab-testing", href: "/ab-testing", label: "A/B Testing", icon: GitBranch },
-  { id: "history", href: "/history", label: "History", icon: History },
-  { id: "debug", href: "/debug", label: "Debug", icon: Terminal },
+  { id: "prompts", href: "/app/prompts", label: "Prompts", icon: FileText },
+  { id: "personas", href: "/app/personas", label: "Personas", icon: Users },
+  { id: "scenarios", href: "/app/scenarios", label: "Scenarios", icon: FlaskConical },
+  { id: "ab-testing", href: "/app/ab-testing", label: "A/B Testing", icon: GitBranch },
+  { id: "history", href: "/app/history", label: "History", icon: History },
+  { id: "debug", href: "/app/debug", label: "Debug", icon: Terminal },
 ]
 
 export function DashboardNav() {
