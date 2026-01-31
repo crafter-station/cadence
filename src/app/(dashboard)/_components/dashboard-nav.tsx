@@ -15,7 +15,7 @@ import {
 } from "lucide-react"
 
 const MODULES = [
-  { id: "evaluation", href: "/", label: "Evaluation", icon: Play },
+  { id: "evaluation", href: "/app", label: "Evaluation", icon: Play },
   { id: "prompts", href: "/prompts", label: "Prompts", icon: FileText },
   { id: "personas", href: "/personas", label: "Personas", icon: Users },
   { id: "scenarios", href: "/scenarios", label: "Scenarios", icon: FlaskConical },
@@ -28,7 +28,7 @@ export function DashboardNav() {
   const pathname = usePathname()
 
   const isActive = (href: string) => {
-    if (href === "/") return pathname === "/"
+    if (href === "/app") return pathname === "/app"
     return pathname.startsWith(href)
   }
 
@@ -37,7 +37,7 @@ export function DashboardNav() {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-10">
-            <Link href="/" className="flex items-center gap-2.5">
+            <Link href="/app" className="flex items-center gap-2.5">
               <LayoutDashboard className="w-5 h-5 text-foreground" />
               <span className="font-semibold text-lg tracking-tight">cadence</span>
             </Link>
