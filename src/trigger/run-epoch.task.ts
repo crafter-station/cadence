@@ -29,6 +29,7 @@ export const RunEpochTask = schemaTask({
     epochNumber: z.number(),
     promptId: z.string(),
     userId: z.string(),
+    externalAgentId: z.string(), // Required for voice calls
     config: z.object({
       testsPerEpoch: z.number(),
       personalityIds: z.array(z.string()),
@@ -65,17 +66,16 @@ export const RunEpochTask = schemaTask({
     // Create test run
     const testRunId = nanoid();
     const testsPerPersonality: Record<string, number> = {};
-    const testsEach = Math.ceil(
-      payload.config.testsPerEpoch / payload.config.personalityIds.length
-    );
+    // 1 call per persona per epoch
     for (const pid of payload.config.personalityIds) {
-      testsPerPersonality[pid] = testsEach;
+      testsPerPersonality[pid] = 1;
     }
 
     await db.insert(schema.testRun).values({
       id: testRunId,
       userId: payload.userId,
       promptId: payload.promptId,
+      externalAgentId: payload.externalAgentId,
       status: "pending",
       config: {
         testsPerPersonality,
@@ -88,23 +88,21 @@ export const RunEpochTask = schemaTask({
           costPerCall: 0.5,
         },
       },
-      totalSessions: payload.config.testsPerEpoch,
+      totalSessions: payload.config.personalityIds.length, // 1 per persona
     });
 
-    // Create test sessions
+    // Create test sessions - 1 per persona
     const sessionInserts: schema.TestSessionInsert[] = [];
     for (const personalityId of payload.config.personalityIds) {
-      for (let i = 0; i < testsEach; i++) {
-        sessionInserts.push({
-          id: nanoid(),
-          testRunId,
-          personalityId,
-          instanceNumber: i + 1,
-          status: "pending",
-          progress: 0,
-          transcript: [],
-        });
-      }
+      sessionInserts.push({
+        id: nanoid(),
+        testRunId,
+        personalityId,
+        instanceNumber: 1,
+        status: "pending",
+        progress: 0,
+        transcript: [],
+      });
     }
 
     if (sessionInserts.length > 0) {

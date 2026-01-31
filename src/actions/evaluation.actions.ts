@@ -13,6 +13,7 @@ export interface CreateEvaluationInput {
   name: string;
   description?: string;
   sourcePromptId: string;
+  externalAgentId: string; // Required for voice calls
   config: {
     maxEpochs: number;
     testsPerEpoch: number;
@@ -55,11 +56,33 @@ export async function createEvaluationAction(
       name: input.name,
       description: input.description ?? null,
       sourcePromptId: input.sourcePromptId,
+      externalAgentId: input.externalAgentId,
       config: input.config,
       status: "pending",
       currentEpochNumber: 0,
       totalEpochs: 0,
     });
+
+    // Automatically trigger the evaluation after creation
+    const handle = await tasks.trigger<typeof RunEvaluationTask>(
+      "run-evaluation",
+      {
+        evaluationId,
+        userId: input.userId,
+      },
+      {
+        tags: [`evaluation:${evaluationId}`, `user:${input.userId}`],
+      }
+    );
+
+    // Update evaluation with trigger run ID
+    await db
+      .update(schema.evaluation)
+      .set({
+        triggerRunId: handle.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.evaluation.id, evaluationId));
 
     return {
       success: true,

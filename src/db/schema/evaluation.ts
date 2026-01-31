@@ -9,6 +9,7 @@ import {
 
 import { EvaluationStatusEnum } from "./enums";
 import { prompt } from "./prompt";
+import { externalAgent } from "./external-agent";
 
 export const evaluation = pgTable("evaluation", {
   id: text("id").primaryKey(),
@@ -21,6 +22,11 @@ export const evaluation = pgTable("evaluation", {
     .notNull()
     .references(() => prompt.id),
   bestPromptId: text("best_prompt_id").references(() => prompt.id),
+
+  // External agent for voice calls
+  externalAgentId: text("external_agent_id")
+    .notNull()
+    .references(() => externalAgent.id),
 
   // Configuration
   config: jsonb("config").$type<{

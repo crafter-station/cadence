@@ -1,86 +1,100 @@
-![hero](public/og.png)
+# Cadence
 
-<h1 align="center">Cadence</h1>
+Large-scale testing infrastructure for AI agents and LLM-powered systems.
 
-<p align="center">
-  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js" alt="Next.js" /></a>
-  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white" alt="React" /></a>
-  <a href="https://typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5-blue?logo=typescript&logoColor=white" alt="TypeScript" /></a>
-  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind-4-38bdf8?logo=tailwindcss&logoColor=white" alt="Tailwind" /></a>
-  <a href="https://neon.tech/"><img src="https://img.shields.io/badge/Neon-Postgres-00e599?logo=postgresql&logoColor=white" alt="Neon" /></a>
-  <a href="https://trigger.dev/"><img src="https://img.shields.io/badge/Trigger.dev-Jobs-8b5cf6?logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMkw0IDdWMTdMOSAyMEwxMiAxOEwxNSAyMEwyMCAxN1Y3TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==" alt="Trigger.dev" /></a>
-  <a href="https://clerk.com/"><img src="https://img.shields.io/badge/Clerk-Auth-6c47ff?logo=clerk&logoColor=white" alt="Clerk" /></a>
-</p>
+## Overview
 
-<p align="center">
-  Epoch-based AI agent prompt optimization
-  <br />
-  <br />
-  <a href="https://cadence.crafter.run">Website</a>
-  ·
-  <a href="https://github.com/crafter-station/cadence/issues">Issues</a>
-  ·
-  <a href="https://crafters.chat">Community</a>
-</p>
+Cadence is an AI agent evaluation platform that enables teams to run thousands of parallel test sessions against their conversational AI systems. Test with synthetic personas, optimize prompts automatically, and track business metrics—all before your users find the edge cases.
 
-## What is Cadence?
+## Features
 
-Cadence is an automated prompt optimization platform that iteratively improves AI agent prompts through epoch-based evaluation cycles. Each epoch tests a prompt version against synthetic user personas, measures performance metrics (accuracy, conversion, latency), and uses AI to generate improved versions.
-
-### Key Features
-
-- **Epoch-Based Optimization** - Automated iterative improvement cycles with configurable stopping criteria
-- **Synthetic Personas** - Test against diverse user personalities with customizable traits
-- **Real-Time Monitoring** - Watch sessions execute in parallel with live transcript updates
-- **Prompt Versioning** - Full version control with diff views and performance metrics per version
-- **Conversion Tracking** - Define and track custom conversion goals (schedule demo, collect email, etc.)
-- **Session Replay** - Reproduce and analyze any test session for debugging
-
-## Quick Start
-
-```bash
-# Install dependencies
-pnpm install
-
-# Set up environment variables
-cp .env.example .env.local
-
-# Push database schema
-pnpm db:push
-
-# Seed initial data
-pnpm db:seed
-
-# Start development server
-pnpm dev
-
-# In another terminal, start Trigger.dev
-bunx trigger.dev@latest dev
-```
+- **Synthetic Personas** — Test against 6 distinct user archetypes, from frustrated executives to confused elderly users
+- **Parallel Execution** — Run thousands of concurrent test sessions with configurable concurrency controls
+- **Self-Healing Prompts** — AI analyzes failures and suggests prompt improvements with confidence scores
+- **A/B Testing** — Compare prompt versions with statistical significance and automatic winner detection
+- **Business Metrics** — Track resolution rates, CSAT scores, handle time, and cost per interaction
+- **Scenario Builder** — Create scripted conversation flows with assertions and validation rules
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript 5
-- **Styling**: Tailwind CSS 4
-- **Database**: Neon (Serverless Postgres) + Drizzle ORM
+- **Framework**: Next.js 16, React 19
+- **Database**: PostgreSQL (Neon), Drizzle ORM
 - **Auth**: Clerk
+- **UI**: shadcn/ui (New York style), Tailwind CSS 4, Radix UI
+- **State**: TanStack React Query
+- **AI**: Vercel AI SDK, Anthropic, OpenAI
 - **Background Jobs**: Trigger.dev
-- **AI**: Vercel AI SDK (Anthropic Claude)
-- **UI**: Radix UI + shadcn/ui
+- **Runtime**: Bun
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- Bun
+- PostgreSQL database (or Neon account)
+- Clerk account for authentication
+- Trigger.dev account for background jobs
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/crafter-station/cadence.git
+cd cadence
+
+# Install dependencies
+bun install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your credentials
+
+# Push database schema
+bun db:push
+
+# Seed initial data (optional)
+bun db:seed
+
+# Start development server
+bun dev
+```
+
+### Environment Variables
+
+Required environment variables:
+
+- `DATABASE_URL` — PostgreSQL connection string
+- `CLERK_SECRET_KEY` — Clerk authentication secret
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — Clerk public key
+- `TRIGGER_SECRET_KEY` — Trigger.dev API key
+- `OPENAI_API_KEY` — OpenAI API key
+- `ANTHROPIC_API_KEY` — Anthropic API key
 
 ## Project Structure
 
 ```
 src/
-├── app/                 # Next.js App Router pages
-│   └── app/            # Dashboard pages
-├── components/         # React components
-├── db/                 # Database schema and queries
-├── actions/            # Server actions
-├── hooks/              # React Query hooks
-├── lib/                # Utilities and AI functions
-└── trigger/            # Background job tasks
+├── actions/       # Server Actions
+├── app/           # Next.js App Router pages
+├── components/    # React components
+├── db/            # Drizzle ORM schema and client
+├── hooks/         # React Query hooks
+├── lib/           # Utilities and AI helpers
+├── trigger/       # Background job tasks
+└── types/         # TypeScript definitions
+```
+
+See [AGENTS.md](./AGENTS.md) for detailed code style guidelines.
+
+## Development
+
+```bash
+bun dev           # Start dev server
+bun build         # Production build
+bun lint          # Run ESLint
+bun db:studio     # Open Drizzle Studio
+bunx trigger dev  # Run Trigger.dev locally
 ```
 
 ## License
