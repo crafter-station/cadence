@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { ABTestingDashboard } from "@/components/ab-testing-dashboard"
+import { ComingSoon } from "@/components/coming-soon"
 
 export const metadata: Metadata = {
   title: "A/B Testing | Cadence",
@@ -9,7 +9,10 @@ export const metadata: Metadata = {
 export default function ABTestingPage() {
   return (
     <div className="h-[calc(100vh-57px)]">
-      <ABTestingDashboard />
+      <ComingSoon
+        title="A/B Testing"
+        description="Run controlled A/B experiments to compare prompt variants and measure their impact on key metrics."
+      />
     </div>
   )
 }

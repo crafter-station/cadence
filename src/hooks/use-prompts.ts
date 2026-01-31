@@ -9,7 +9,10 @@ import {
   createPromptAction,
   updatePromptAction,
   deletePromptAction,
+  createPromptVersionAction,
+  getAllPromptsGroupedAction,
   type CreatePromptInput,
+  type CreatePromptVersionInput,
 } from "@/actions/prompt.actions";
 import type { PromptSelect } from "@/db/schema";
 
@@ -112,6 +115,28 @@ export function useDeletePrompt() {
       deletePromptAction(promptId, userId),
     onSuccess: (_result, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ["prompts", userId] });
+      queryClient.invalidateQueries({ queryKey: ["prompts-grouped", userId] });
+    },
+  });
+}
+
+export function usePromptsGrouped(userId: string) {
+  return useQuery({
+    queryKey: ["prompts-grouped", userId],
+    queryFn: () => getAllPromptsGroupedAction(userId),
+    enabled: !!userId,
+  });
+}
+
+export function useCreatePromptVersion() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createPromptVersionAction,
+    onSuccess: (_result, input) => {
+      queryClient.invalidateQueries({ queryKey: ["prompts", input.userId] });
+      queryClient.invalidateQueries({ queryKey: ["prompts-grouped", input.userId] });
+      queryClient.invalidateQueries({ queryKey: ["prompt-versions"] });
     },
   });
 }

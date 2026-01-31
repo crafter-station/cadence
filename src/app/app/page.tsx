@@ -1,14 +1,21 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useUser } from "@clerk/nextjs"
-import { Play, Settings2, Zap, Target, Sparkles, Plus, X } from "lucide-react"
+import { Play, Settings2, Zap, Target, Sparkles, Plus, X, FileText, ChevronDown, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Select,
   SelectContent,
@@ -18,7 +25,7 @@ import {
 } from "@/components/ui/select"
 import { PersonalityGrid } from "@/components/personality-grid"
 import { usePersonalities } from "@/hooks/use-personalities"
-import { usePrompts } from "@/hooks/use-prompts"
+import { usePrompts, useCreatePromptVersion } from "@/hooks/use-prompts"
 import { useCreateEvaluation, useStartEvaluation } from "@/hooks/use-evaluations"
 import type { Personality } from "@/lib/types"
 
@@ -58,11 +65,15 @@ export default function EvaluationPage() {
   const [conversionGoals, setConversionGoals] = useState<string[]>([])
   const [newGoal, setNewGoal] = useState("")
   const [isStarting, setIsStarting] = useState(false)
+  const [showPromptPreview, setShowPromptPreview] = useState(false)
+  const [editedPromptContent, setEditedPromptContent] = useState("")
+  const [hasPromptChanges, setHasPromptChanges] = useState(false)
 
   const { data: backendPersonalities } = usePersonalities(userId)
   const { data: prompts } = usePrompts(userId)
   const createEvaluation = useCreateEvaluation()
   const startEvaluation = useStartEvaluation()
+  const createPromptVersion = useCreatePromptVersion()
 
   const personalities = useMemo<Personality[]>(() => {
     if (!backendPersonalities) return []
@@ -80,8 +91,41 @@ export default function EvaluationPage() {
   const activePrompt = prompts?.find(p => p.id === selectedPromptId) ?? prompts?.[0]
 
   // Set prompt ID when prompts load
-  if (prompts && prompts.length > 0 && !selectedPromptId) {
-    setSelectedPromptId(prompts[0].id)
+  useEffect(() => {
+    if (prompts && prompts.length > 0 && !selectedPromptId) {
+      setSelectedPromptId(prompts[0].id)
+    }
+  }, [prompts, selectedPromptId])
+
+  // Sync edited content with selected prompt
+  useEffect(() => {
+    if (activePrompt) {
+      setEditedPromptContent(activePrompt.content)
+      setHasPromptChanges(false)
+    }
+  }, [activePrompt])
+
+  const handlePromptContentChange = (value: string) => {
+    setEditedPromptContent(value)
+    setHasPromptChanges(value !== activePrompt?.content)
+  }
+
+  const handleSavePromptVersion = async () => {
+    if (!activePrompt || !hasPromptChanges || !userId) return
+
+    try {
+      const result = await createPromptVersion.mutateAsync({
+        userId,
+        parentId: activePrompt.id,
+        content: editedPromptContent,
+      })
+      if (result.success && result.promptId) {
+        setSelectedPromptId(result.promptId)
+        setHasPromptChanges(false)
+      }
+    } catch (error) {
+      console.error("Failed to save prompt version:", error)
+    }
   }
 
   const addGoal = () => {
@@ -163,11 +207,23 @@ export default function EvaluationPage() {
           <div className="lg:col-span-2 space-y-4">
             {/* Prompt Selection */}
             <Card>
-              <CardHeader className="px-4 py-3 border-b border-border">
-                <h2 className="text-sm font-medium">Source Prompt</h2>
+              <CardHeader className="px-4 py-3 border-b border-border flex flex-row items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="text-sm font-medium">Source Prompt</h2>
+                </div>
+                <Link href="/app/prompts">
+                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                    <ExternalLink className="w-3 h-3" />
+                    Manage
+                  </Button>
+                </Link>
               </CardHeader>
-              <CardContent className="p-4">
-                <Select value={selectedPromptId} onValueChange={setSelectedPromptId}>
+              <CardContent className="p-4 space-y-3">
+                <Select value={selectedPromptId} onValueChange={(id) => {
+                  setSelectedPromptId(id)
+                  setShowPromptPreview(false)
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a prompt to optimize" />
                   </SelectTrigger>
@@ -179,6 +235,66 @@ export default function EvaluationPage() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                {activePrompt && (
+                  <Collapsible open={showPromptPreview} onOpenChange={setShowPromptPreview}>
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-between h-8 text-xs text-muted-foreground"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          {showPromptPreview ? "Hide" : "Preview"} prompt content
+                          {hasPromptChanges && (
+                            <Badge variant="outline" className="text-chart-3 border-chart-3/30 text-[10px] px-1">
+                              Unsaved
+                            </Badge>
+                          )}
+                        </span>
+                        <ChevronDown className={`w-3 h-3 transition-transform ${showPromptPreview ? "rotate-180" : ""}`} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3">
+                      <div className="space-y-3">
+                        <Textarea
+                          value={editedPromptContent}
+                          onChange={(e) => handlePromptContentChange(e.target.value)}
+                          className="min-h-[200px] font-mono text-xs"
+                          placeholder="Enter your prompt..."
+                        />
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground">
+                            {editedPromptContent.length} chars · v{activePrompt.version}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {hasPromptChanges && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  setEditedPromptContent(activePrompt.content)
+                                  setHasPromptChanges(false)
+                                }}
+                              >
+                                Revert
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs"
+                              disabled={!hasPromptChanges || createPromptVersion.isPending}
+                              onClick={handleSavePromptVersion}
+                            >
+                              {createPromptVersion.isPending ? "Saving..." : "Save as New Version"}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
               </CardContent>
             </Card>
 
