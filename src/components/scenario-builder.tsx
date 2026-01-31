@@ -168,16 +168,16 @@ export function ScenarioBuilder() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Category Sidebar */}
-        <Card className="w-64 border-0 border-r border-border flex flex-col">
-          <div className="px-3 py-2 border-b border-border">
+        <Card className="w-64 border-0 border-r border-border flex flex-col overflow-hidden">
+          <div className="px-3 py-2 border-b border-border shrink-0">
             <Input
               type="text"
               placeholder="Search scenarios..."
               className="h-7 text-xs"
             />
           </div>
-          
-          <ScrollArea className="flex-1">
+
+          <ScrollArea className="flex-1 min-h-0">
             {CATEGORIES.map((category) => {
               const isExpanded = expandedCategories.includes(category.name)
               const categoryScenarios = scenarios.filter(s => s.category === category.name)
@@ -230,9 +230,9 @@ export function ScenarioBuilder() {
 
         {/* Scenario Editor */}
         {selectedScenario ? (
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col overflow-hidden">
             {/* Scenario Header */}
-            <div className="px-4 py-3 border-b border-border">
+            <div className="px-4 py-3 border-b border-border shrink-0">
               <div className="flex items-center justify-between mb-2">
                 <Input
                   type="text"
@@ -264,7 +264,7 @@ export function ScenarioBuilder() {
             </div>
 
             {/* Steps */}
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 min-h-0 p-4">
               <div className="space-y-3">
                 {selectedScenario.steps.map((step, index) => (
                   <Card

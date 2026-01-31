@@ -335,7 +335,7 @@ export function DebugConsole() {
       </div>
 
       {/* Logs */}
-      <ScrollArea className="flex-1 font-mono text-xs">
+      <ScrollArea className="flex-1 min-h-0 font-mono text-xs">
         {filteredLogs.map((log) => {
           const isExpanded = expandedLogs.has(log.id)
           

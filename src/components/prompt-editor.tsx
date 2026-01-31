@@ -220,8 +220,8 @@ export function PromptEditor() {
       <div className="flex-1 flex overflow-hidden">
         {/* Version Sidebar */}
         {showVersions && (
-          <Card className="w-72 border-0 border-r border-border flex flex-col">
-            <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+          <Card className="w-72 border-0 border-r border-border flex flex-col overflow-hidden">
+            <div className="px-3 py-2 border-b border-border flex items-center justify-between shrink-0">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <History className="w-3.5 h-3.5" />
                 <span>Version History</span>
@@ -230,8 +230,8 @@ export function PromptEditor() {
                 <Plus className="w-3.5 h-3.5" />
               </Button>
             </div>
-            
-            <ScrollArea className="flex-1">
+
+            <ScrollArea className="flex-1 min-h-0">
               {versions.map((version) => (
                 <div
                   key={version.id}
@@ -293,14 +293,14 @@ export function PromptEditor() {
         <div className="flex-1 flex flex-col">
           {compareVersion && compareVersion.id !== selectedVersion.id ? (
             // Diff View
-            <div className="flex-1 flex">
-              <div className="flex-1 border-r border-border flex flex-col">
-                <div className="px-3 py-2 border-b border-border bg-destructive/5">
+            <div className="flex-1 flex overflow-hidden">
+              <div className="flex-1 border-r border-border flex flex-col overflow-hidden">
+                <div className="px-3 py-2 border-b border-border bg-destructive/5 shrink-0">
                   <Badge variant="outline" className="text-xs font-mono text-muted-foreground">
                     {compareVersion.version} (base)
                   </Badge>
                 </div>
-                <ScrollArea className="flex-1 p-4 font-mono text-xs leading-relaxed">
+                <ScrollArea className="flex-1 min-h-0 p-4 font-mono text-xs leading-relaxed">
                   {getDiff()?.map((line, i) => (
                     <div
                       key={i}
@@ -320,13 +320,13 @@ export function PromptEditor() {
                   ))}
                 </ScrollArea>
               </div>
-              <div className="flex-1 flex flex-col">
-                <div className="px-3 py-2 border-b border-border bg-chart-2/5">
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="px-3 py-2 border-b border-border bg-chart-2/5 shrink-0">
                   <Badge variant="outline" className="text-xs font-mono text-muted-foreground">
                     {selectedVersion.version} (current)
                   </Badge>
                 </div>
-                <ScrollArea className="flex-1 p-4 font-mono text-xs leading-relaxed">
+                <ScrollArea className="flex-1 min-h-0 p-4 font-mono text-xs leading-relaxed">
                   {getDiff()?.map((line, i) => (
                     <div
                       key={i}
@@ -349,8 +349,8 @@ export function PromptEditor() {
             </div>
           ) : (
             // Editor View
-            <div className="flex-1 flex flex-col">
-              <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="px-3 py-2 border-b border-border flex items-center justify-between shrink-0">
                 <Badge variant="outline" className="text-xs font-mono text-muted-foreground">
                   {selectedVersion.version} — {selectedVersion.description}
                 </Badge>
@@ -361,7 +361,7 @@ export function PromptEditor() {
               <Textarea
                 value={editedContent}
                 onChange={(e) => handleContentChange(e.target.value)}
-                className="flex-1 w-full p-4 bg-transparent resize-none font-mono text-xs leading-relaxed focus-visible:ring-0 border-0"
+                className="flex-1 min-h-0 w-full p-4 bg-transparent resize-none font-mono text-xs leading-relaxed focus-visible:ring-0 border-0"
                 spellCheck={false}
               />
             </div>

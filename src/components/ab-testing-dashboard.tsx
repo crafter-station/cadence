@@ -323,12 +323,12 @@ export function ABTestingDashboard() {
         </div>
 
         {/* Sidebar - Past Experiments */}
-        <Card className="w-64 border-0 border-l border-border flex flex-col">
-          <CardHeader className="px-3 py-2 border-b border-border space-y-0">
+        <Card className="w-64 border-0 border-l border-border flex flex-col overflow-hidden">
+          <CardHeader className="px-3 py-2 border-b border-border space-y-0 shrink-0">
             <span className="text-xs font-medium">Past Experiments</span>
           </CardHeader>
-          
-          <ScrollArea className="flex-1">
+
+          <ScrollArea className="flex-1 min-h-0">
             {PAST_EXPERIMENTS.map((exp) => (
               <button
                 key={exp.id}

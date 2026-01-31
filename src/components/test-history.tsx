@@ -255,9 +255,9 @@ export function TestHistory() {
         </Card>
 
         {/* Run List */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {/* Filters */}
-          <div className="px-4 py-2 border-b border-border flex items-center gap-2">
+          <div className="px-4 py-2 border-b border-border flex items-center gap-2 shrink-0">
             <Filter className="w-3.5 h-3.5 text-muted-foreground" />
             <div className="flex items-center gap-1">
               {(['all', 'completed', 'failed'] as const).map((f) => (
@@ -278,7 +278,7 @@ export function TestHistory() {
           </div>
 
           {/* Runs */}
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             {filteredRuns.map((run, index) => {
               const prevDate = index > 0 ? filteredRuns[index - 1].date : null
               const showDateHeader = run.date !== prevDate

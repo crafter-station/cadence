@@ -32,26 +32,26 @@ export function DashboardNav() {
   }
 
   return (
-    <div className="border-b border-border bg-card">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-14">
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2">
-              <LayoutDashboard className="w-5 h-5 text-chart-1" />
-              <span className="font-semibold tracking-tight">Cadence</span>
+    <div className="border-b border-border/50 bg-background">
+      <div className="container mx-auto px-6">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center gap-10">
+            <Link href="/" className="flex items-center gap-2.5">
+              <LayoutDashboard className="w-5 h-5 text-foreground" />
+              <span className="font-semibold text-lg tracking-tight">cadence</span>
             </Link>
 
-            <nav className="flex items-center">
+            <nav className="flex items-center gap-1">
               {MODULES.map((module) => {
                 const Icon = module.icon
                 return (
                   <Link
                     key={module.id}
                     href={module.href}
-                    className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+                    className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
                       isActive(module.href)
-                        ? "text-foreground bg-secondary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                        ? "text-foreground font-medium"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -62,8 +62,8 @@ export function DashboardNav() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span>v1.5.0</span>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span className="font-mono">v1.5.0</span>
           </div>
         </div>
       </div>

@@ -415,8 +415,8 @@ export default function EvaluationPage() {
             />
           </div>
 
-          <div className="space-y-0">
-            <div className="flex border border-border border-b-0 bg-card">
+          <div className="flex flex-col min-h-0 overflow-hidden">
+            <div className="flex border border-border border-b-0 bg-card shrink-0">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -432,7 +432,7 @@ export default function EvaluationPage() {
               ))}
             </div>
 
-            <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+            <div className="flex-1 overflow-y-auto border border-border border-t-0">
               {activeTab === "config" && (
                 <TestConfigPanel
                   personalities={personalities}
