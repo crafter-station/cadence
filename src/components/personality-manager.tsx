@@ -22,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { Personality } from "@/app/page"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import type { Personality } from "@/lib/types"
 
 interface PersonalityManagerProps {
   personalities: Personality[]
@@ -147,7 +148,7 @@ export function PersonalityManager({
             {personalities.map((personality) => (
               <div
                 key={personality.id}
-                className="flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
+                className="flex items-center justify-between p-4 hover:bg-secondary/30 transition-all duration-200 animate-in fade-in-0 slide-in-from-top-1"
               >
                 <div className="flex items-start gap-3 flex-1 min-w-0">
                   <div
@@ -207,13 +208,14 @@ export function PersonalityManager({
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {editingId ? "Edit Personality" : "Add New Personality"}
             </DialogTitle>
           </DialogHeader>
 
+          <ScrollArea className="flex-1 pr-4">
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
@@ -236,67 +238,70 @@ export function PersonalityManager({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="color">Color</Label>
-              <Select
-                value={formData.color}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, color: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {COLORS.map((color) => (
-                    <SelectItem key={color.value} value={color.value}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="h-3 w-3 rounded-sm"
-                          style={{ backgroundColor: color.preview }}
-                        />
-                        {color.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="color">Color</Label>
+                <Select
+                  value={formData.color}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, color: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COLORS.map((color) => (
+                      <SelectItem key={color.value} value={color.value}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-3 w-3 rounded-sm"
+                            style={{ backgroundColor: color.preview }}
+                          />
+                          {color.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Behavioral Traits</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add a trait..."
+                    value={newTrait}
+                    onChange={(e) => setNewTrait(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        addTrait()
+                      }
+                    }}
+                  />
+                  <Button type="button" variant="outline" size="icon" onClick={addTrait}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Behavioral Traits</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add a trait..."
-                  value={newTrait}
-                  onChange={(e) => setNewTrait(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      addTrait()
-                    }
-                  }}
-                />
-                <Button type="button" variant="outline" size="icon" onClick={addTrait}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-1.5 min-h-[28px]">
-                {formData.traits.map((trait) => (
-                  <Badge
-                    key={trait}
-                    variant="secondary"
-                    className="text-xs gap-1 pr-1"
+            <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+              {formData.traits.map((trait) => (
+                <Badge
+                  key={trait}
+                  variant="secondary"
+                  className="text-xs gap-1 pr-1"
+                >
+                  {trait}
+                  <button
+                    type="button"
+                    onClick={() => removeTrait(trait)}
+                    className="ml-0.5 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                   >
-                    {trait}
-                    <button
-                      type="button"
-                      onClick={() => removeTrait(trait)}
-                      className="ml-0.5 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                    >
-                      <X className="h-2.5 w-2.5" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </Badge>
+              ))}
             </div>
 
             <div className="space-y-2">
@@ -306,11 +311,11 @@ export function PersonalityManager({
                 placeholder="Custom instructions for how the AI should roleplay this personality..."
                 value={formData.systemPrompt || ""}
                 onChange={(e) => setFormData((prev) => ({ ...prev, systemPrompt: e.target.value }))}
-                rows={4}
-                className="font-mono text-xs"
+                className="font-mono text-xs h-[300px] resize-none"
               />
             </div>
           </div>
+          </ScrollArea>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
