@@ -426,38 +426,51 @@ export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
                           )}
 
                           {/* Full Prompt Diff */}
-                          {improvement.originalPrompt && improvement.improvedPrompt && (
-                            <div className="pt-3 border-t border-border">
-                              <details className="group">
-                                <summary className="text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1 mb-3">
-                                  <ChevronRight className="w-3 h-3 transition-transform group-open:rotate-90" />
-                                  View full prompt diff
-                                </summary>
-                                <PromptDiffView
-                                  originalPrompt={improvement.originalPrompt}
-                                  improvedPrompt={improvement.improvedPrompt}
-                                  originalLabel={`v${epoch.epochNumber}`}
-                                  improvedLabel={`v${epoch.epochNumber + 1}`}
-                                  className="max-h-80"
-                                />
-                              </details>
-                            </div>
-                          )}
+                          {(() => {
+                            // Get prompts from improvementApplied or from epoch prompt chain
+                            const originalPrompt = improvement.originalPrompt || epoch.prompt?.content
+                            const nextEpoch = epochs[index + 1]
+                            const improvedPrompt = improvement.improvedPrompt || nextEpoch?.prompt?.content
 
-                          {/* Fallback: View current prompt version */}
-                          {!improvement.improvedPrompt && epoch.prompt && (
-                            <div className="pt-2 border-t border-border">
-                              <details className="group">
-                                <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
-                                  <ChevronRight className="w-3 h-3 transition-transform group-open:rotate-90" />
-                                  View full prompt v{epoch.prompt.version}
-                                </summary>
-                                <pre className="mt-3 p-3 bg-secondary/50 rounded-lg text-xs overflow-auto max-h-64 whitespace-pre-wrap">
-                                  {epoch.prompt.content}
-                                </pre>
-                              </details>
-                            </div>
-                          )}
+                            if (originalPrompt && improvedPrompt) {
+                              return (
+                                <div className="pt-3 border-t border-border">
+                                  <details className="group" open>
+                                    <summary className="text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1 mb-3">
+                                      <ChevronRight className="w-3 h-3 transition-transform group-open:rotate-90" />
+                                      View full prompt diff
+                                    </summary>
+                                    <PromptDiffView
+                                      originalPrompt={originalPrompt}
+                                      improvedPrompt={improvedPrompt}
+                                      originalLabel={`v${epoch.prompt?.version || epoch.epochNumber}`}
+                                      improvedLabel={`v${nextEpoch?.prompt?.version || epoch.epochNumber + 1}`}
+                                      className="max-h-80"
+                                    />
+                                  </details>
+                                </div>
+                              )
+                            }
+
+                            // Fallback: View current prompt version only
+                            if (epoch.prompt) {
+                              return (
+                                <div className="pt-2 border-t border-border">
+                                  <details className="group">
+                                    <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
+                                      <ChevronRight className="w-3 h-3 transition-transform group-open:rotate-90" />
+                                      View full prompt v{epoch.prompt.version}
+                                    </summary>
+                                    <pre className="mt-3 p-3 bg-secondary/50 rounded-lg text-xs overflow-auto max-h-64 whitespace-pre-wrap">
+                                      {epoch.prompt.content}
+                                    </pre>
+                                  </details>
+                                </div>
+                              )
+                            }
+
+                            return null
+                          })()}
                         </CardContent>
                       )}
 
