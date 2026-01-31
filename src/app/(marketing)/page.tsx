@@ -310,15 +310,131 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 px-8 py-8 border-t border-[#E8E4D9]/10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-[#E8E4D9]/40" />
-            <span className="text-xs text-[#E8E4D9]/40">cadence</span>
+      <footer className="relative z-10 overflow-hidden">
+        {/* Top Divider */}
+        <div className="h-px w-full border-t border-[#E8E4D9]/10" />
+
+        <div className="max-w-7xl mx-auto px-8 py-16 sm:pb-80">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+            {/* Left Column - Links */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-10">
+              {/* Features Column */}
+              <div>
+                <h3 className="text-sm text-[#E8E4D9] mb-4">Features</h3>
+                <div className="space-y-2.5">
+                  {[
+                    { href: "/app", label: "Evaluation" },
+                    { href: "/app/personas", label: "Personas" },
+                    { href: "/app/scenarios", label: "Scenarios" },
+                    { href: "/app/ab-testing", label: "A/B Testing" },
+                    { href: "/app/prompts", label: "Prompts" },
+                    { href: "/app/history", label: "History" },
+                  ].map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="text-sm text-[#E8E4D9]/50 hover:text-[#E8E4D9] transition-colors block"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Resources Column */}
+              <div>
+                <h3 className="text-sm text-[#E8E4D9] mb-4">Resources</h3>
+                <div className="space-y-2.5">
+                  {[
+                    { href: "#", label: "Documentation" },
+                    { href: "#", label: "API Reference" },
+                    { href: "#", label: "Changelog" },
+                    { href: "#", label: "Support" },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      className="text-sm text-[#E8E4D9]/50 hover:text-[#E8E4D9] transition-colors block"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Company Column */}
+              <div>
+                <h3 className="text-sm text-[#E8E4D9] mb-4">Company</h3>
+                <div className="space-y-2.5">
+                  {[
+                    { href: "https://github.com/crafter-station", label: "GitHub", external: true },
+                    { href: "https://x.com/craboratory", label: "X / Twitter", external: true },
+                    { href: "#", label: "Privacy Policy", external: false },
+                    { href: "#", label: "Terms of Service", external: false },
+                  ].map((item) => (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      target={item.external ? "_blank" : undefined}
+                      rel={item.external ? "noopener noreferrer" : undefined}
+                      className="text-sm text-[#E8E4D9]/50 hover:text-[#E8E4D9] transition-colors block"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Tagline */}
+            <div className="flex flex-col items-start lg:items-end gap-6">
+              <p className="text-base sm:text-xl text-[#E8E4D9] text-left lg:text-right max-w-md">
+                Large-scale testing infrastructure for AI agents that actually works.
+              </p>
+
+              {/* Status */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[#E8E4D9]/50">System status:</span>
+                <span className="text-sm text-[#E8E4D9]">Operational</span>
+                <div className="relative flex items-center justify-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full relative z-10" />
+                  <div
+                    className="absolute w-2 h-2 bg-green-500 rounded-full animate-ping"
+                    style={{ animationDuration: "2s" }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="text-[10px] text-[#E8E4D9]/30">
-            Copyright Crafter Station 2025
+
+          {/* Divider */}
+          <div className="my-16">
+            <div className="h-px w-full border-t border-[#E8E4D9]/10" />
           </div>
+
+          {/* Bottom Section */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-[#E8E4D9]/40" />
+              <span className="text-sm text-[#E8E4D9]/40">cadence</span>
+            </div>
+            <p className="text-sm text-[#E8E4D9]/30">
+              © 2025 Crafter Station. All rights reserved.
+            </p>
+          </div>
+        </div>
+
+        {/* Large Wordmark */}
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-[40%] pointer-events-none select-none">
+          <h1
+            className="text-[180px] sm:text-[320px] md:text-[400px] lg:text-[500px] font-bold leading-none tracking-[-0.04em]"
+            style={{
+              WebkitTextStroke: "1px rgba(232, 228, 217, 0.15)",
+              color: "transparent",
+            }}
+          >
+            cadence
+          </h1>
         </div>
       </footer>
     </div>
