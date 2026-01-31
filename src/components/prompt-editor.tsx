@@ -233,12 +233,20 @@ export function PromptEditor() {
             
             <ScrollArea className="flex-1">
               {versions.map((version) => (
-                <button
+                <div
                   key={version.id}
                   onClick={() => selectVersion(version)}
-                  className={`w-full text-left px-3 py-3 border-b border-border transition-colors ${
-                    selectedVersion.id === version.id 
-                      ? 'bg-secondary' 
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      selectVersion(version)
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  className={`w-full text-left px-3 py-3 border-b border-border transition-colors cursor-pointer ${
+                    selectedVersion.id === version.id
+                      ? 'bg-secondary'
                       : 'hover:bg-secondary/50'
                   }`}
                 >
@@ -259,9 +267,12 @@ export function PromptEditor() {
                       <span className="text-muted-foreground">{version.metrics.tests} tests</span>
                     </div>
                   )}
-                  
+
                   {/* Compare checkbox */}
-                  <div className="mt-2 flex items-center gap-1.5">
+                  <div
+                    className="mt-2 flex items-center gap-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Checkbox
                       checked={compareVersion?.id === version.id}
                       onCheckedChange={(checked) => {
@@ -272,7 +283,7 @@ export function PromptEditor() {
                     />
                     <span className="text-[10px] text-muted-foreground">Compare</span>
                   </div>
-                </button>
+                </div>
               ))}
             </ScrollArea>
           </Card>
