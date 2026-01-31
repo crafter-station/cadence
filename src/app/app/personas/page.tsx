@@ -1,74 +1,76 @@
 "use client"
 
-import type { Metadata } from "next"
-import { useState, useCallback, useMemo } from "react"
+import { useMemo } from "react"
+import { useUser } from "@clerk/nextjs"
 import { PersonalityManager } from "@/components/personality-manager"
-import { usePersonalities } from "@/hooks/use-personalities"
+import {
+  usePersonalities,
+  useCreatePersonality,
+  useUpdatePersonality,
+  useDeletePersonality,
+} from "@/hooks/use-personalities"
 import type { Personality } from "@/lib/types"
-import { FALLBACK_PERSONALITIES } from "@/lib/types"
-
-const MOCK_USER_ID = "user_demo_123"
 
 export default function PersonasPage() {
-  const [customPersonalities, setCustomPersonalities] = useState<Personality[]>([])
+  const { user, isLoaded: isUserLoaded } = useUser()
+  const userId = user?.id
 
-  const { data: backendPersonalities } = usePersonalities(MOCK_USER_ID)
-
-  const basePersonalities = useMemo<Personality[]>(() => {
-    if (backendPersonalities?.length) {
-      return backendPersonalities.map((p) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        traits: p.traits,
-        color: p.color,
-      }))
-    }
-    return FALLBACK_PERSONALITIES
-  }, [backendPersonalities])
+  const { data: backendPersonalities, isLoading: isLoadingPersonalities } = usePersonalities(userId)
+  const createMutation = useCreatePersonality()
+  const updateMutation = useUpdatePersonality()
+  const deleteMutation = useDeletePersonality()
 
   const personalities = useMemo<Personality[]>(() => {
-    // Merge base and custom, keeping original order for base items
-    // Custom edits of base items stay in their original position
-    const merged = basePersonalities.map((bp) => {
-      const customVersion = customPersonalities.find((cp) => cp.id === bp.id)
-      return customVersion || bp
+    if (!backendPersonalities) return []
+    return backendPersonalities.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      traits: p.traits,
+      color: p.color,
+      systemPrompt: p.systemPrompt ?? undefined,
+    }))
+  }, [backendPersonalities])
+
+  const handleAddPersonality = (data: Omit<Personality, "id">) => {
+    if (!userId) return
+    createMutation.mutate({
+      userId,
+      name: data.name,
+      description: data.description,
+      traits: data.traits,
+      systemPrompt: data.systemPrompt,
+      color: data.color,
     })
-    // Add truly new custom personalities at the end
-    const newCustom = customPersonalities.filter(
-      (cp) => !basePersonalities.some((bp) => bp.id === cp.id)
-    )
-    return [...merged, ...newCustom]
-  }, [basePersonalities, customPersonalities])
+  }
 
-  const handleAddPersonality = useCallback((data: Omit<Personality, "id">) => {
-    const newPersonality: Personality = {
-      ...data,
-      id: `custom-${Date.now()}`,
-    }
-    setCustomPersonalities((prev) => [...prev, newPersonality])
-  }, [])
+  const handleEditPersonality = (id: string, updates: Partial<Personality>) => {
+    if (!userId) return
+    updateMutation.mutate({
+      personalityId: id,
+      userId,
+      updates: {
+        name: updates.name,
+        description: updates.description,
+        traits: updates.traits,
+        systemPrompt: updates.systemPrompt,
+        color: updates.color,
+      },
+    })
+  }
 
-  const handleEditPersonality = useCallback(
-    (id: string, updates: Partial<Personality>) => {
-      setCustomPersonalities((prev) => {
-        const existing = prev.find((p) => p.id === id)
-        if (existing) {
-          return prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
-        }
-        const base = basePersonalities.find((p) => p.id === id)
-        if (base) {
-          return [...prev, { ...base, ...updates }]
-        }
-        return prev
-      })
-    },
-    [basePersonalities]
-  )
+  const handleDeletePersonality = (id: string) => {
+    if (!userId) return
+    deleteMutation.mutate({
+      personalityId: id,
+      userId,
+    })
+  }
 
-  const handleDeletePersonality = useCallback((id: string) => {
-    setCustomPersonalities((prev) => prev.filter((p) => p.id !== id))
-  }, [])
+  const isMutating =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending
 
   return (
     <div className="h-[calc(100vh-57px)] overflow-auto">
@@ -81,13 +83,25 @@ export default function PersonasPage() {
             Create and manage synthetic user personas for evaluating your AI agent
           </p>
         </div>
-        <PersonalityManager
-          personalities={personalities}
-          onAdd={handleAddPersonality}
-          onEdit={handleEditPersonality}
-          onDelete={handleDeletePersonality}
-          disabled={false}
-        />
+        {!isUserLoaded || isLoadingPersonalities ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            Loading personas...
+          </div>
+        ) : !userId ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            Please sign in to manage personas
+          </div>
+        ) : (
+          <PersonalityManager
+            personalities={personalities}
+            backendPersonalities={backendPersonalities}
+            userId={userId}
+            onAdd={handleAddPersonality}
+            onEdit={handleEditPersonality}
+            onDelete={handleDeletePersonality}
+            disabled={isMutating}
+          />
+        )}
       </div>
     </div>
   )

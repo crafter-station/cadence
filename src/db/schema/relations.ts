@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 
 import { prompt } from "./prompt";
 import { personality } from "./personality";
+import { personalityVersion } from "./personality-version";
 import { testRun } from "./test-run";
 import { testSession } from "./test-session";
 import { scenario, scenarioStep } from "./scenario";
@@ -29,7 +30,18 @@ export const personalityRelations = relations(personality, ({ many }) => ({
   testSessions: many(testSession),
   scenarioSteps: many(scenarioStep),
   healingSuggestions: many(healingSuggestion),
+  versions: many(personalityVersion),
 }));
+
+export const personalityVersionRelations = relations(
+  personalityVersion,
+  ({ one }) => ({
+    personality: one(personality, {
+      fields: [personalityVersion.personalityId],
+      references: [personality.id],
+    }),
+  })
+);
 
 export const testRunRelations = relations(testRun, ({ one, many }) => ({
   prompt: one(prompt, {

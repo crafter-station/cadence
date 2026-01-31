@@ -4,6 +4,7 @@ export * from "./enums";
 // Tables
 export * from "./prompt";
 export * from "./personality";
+export * from "./personality-version";
 export * from "./test-run";
 export * from "./test-session";
 export * from "./scenario";

@@ -140,21 +140,17 @@ export async function seedDefaultPersonalitiesAction(): Promise<{
 export async function getPersonalitiesAction(
   userId?: string
 ): Promise<schema.PersonalitySelect[]> {
-  // Get default personalities and user's custom personalities
+  if (!userId) {
+    return [];
+  }
+
+  // Only return user's own personalities (no defaults)
   return db.query.personality.findMany({
     where: and(
       eq(schema.personality.isActive, true),
-      userId
-        ? or(
-            eq(schema.personality.isDefault, true),
-            eq(schema.personality.userId, userId)
-          )
-        : eq(schema.personality.isDefault, true)
+      eq(schema.personality.userId, userId)
     ),
-    orderBy: (personality, { asc, desc }) => [
-      desc(personality.isDefault),
-      asc(personality.name),
-    ],
+    orderBy: (personality, { asc }) => [asc(personality.name)],
   });
 }
 
@@ -204,27 +200,71 @@ export async function updatePersonalityAction(
     traits?: string[];
     systemPrompt?: string;
     color?: string;
-  }
-): Promise<{ success: boolean; error?: string }> {
+  },
+  changeReason?: string
+): Promise<{ success: boolean; newPersonalityId?: string; error?: string }> {
   try {
-    const personality = await db.query.personality.findFirst({
+    // First try to find user's own personality
+    let personality = await db.query.personality.findFirst({
       where: and(
         eq(schema.personality.id, personalityId),
         eq(schema.personality.userId, userId)
       ),
     });
 
+    // If not found, check if it's a system default that needs to be cloned
     if (!personality) {
+      const defaultPersonality = await db.query.personality.findFirst({
+        where: and(
+          eq(schema.personality.id, personalityId),
+          eq(schema.personality.isDefault, true)
+        ),
+      });
+
+      if (defaultPersonality) {
+        // Clone the default for this user with the updates applied
+        const newId = nanoid();
+        await db.insert(schema.personality).values({
+          id: newId,
+          userId: userId,
+          name: updates.name ?? defaultPersonality.name,
+          description: updates.description ?? defaultPersonality.description,
+          traits: updates.traits ?? defaultPersonality.traits,
+          systemPrompt: updates.systemPrompt ?? defaultPersonality.systemPrompt,
+          color: updates.color ?? defaultPersonality.color,
+          isDefault: false,
+          isActive: true,
+          version: 1,
+        });
+
+        return { success: true, newPersonalityId: newId };
+      }
+
       return { success: false, error: "Personality not found" };
     }
 
-    if (personality.isDefault) {
-      return { success: false, error: "Cannot modify default personalities" };
-    }
+    // Save current state to version history BEFORE updating
+    await db.insert(schema.personalityVersion).values({
+      id: nanoid(),
+      personalityId: personality.id,
+      version: personality.version,
+      name: personality.name,
+      description: personality.description,
+      traits: personality.traits,
+      systemPrompt: personality.systemPrompt,
+      color: personality.color,
+      changeReason: changeReason ?? null,
+    });
 
+    // Increment version and update
+    const newVersion = personality.version + 1;
     await db
       .update(schema.personality)
-      .set(updates)
+      .set({
+        ...updates,
+        version: newVersion,
+        updatedAt: new Date(),
+      })
       .where(eq(schema.personality.id, personalityId));
 
     return { success: true };
@@ -242,6 +282,7 @@ export async function deletePersonalityAction(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Check if it's the user's own personality
     const personality = await db.query.personality.findFirst({
       where: and(
         eq(schema.personality.id, personalityId),
@@ -249,25 +290,136 @@ export async function deletePersonalityAction(
       ),
     });
 
-    if (!personality) {
-      return { success: false, error: "Personality not found" };
+    if (personality) {
+      // Soft delete user's own personality
+      await db
+        .update(schema.personality)
+        .set({ isActive: false })
+        .where(eq(schema.personality.id, personalityId));
+      return { success: true };
     }
 
-    if (personality.isDefault) {
-      return { success: false, error: "Cannot delete default personalities" };
+    // Check if it's a system default
+    const defaultPersonality = await db.query.personality.findFirst({
+      where: and(
+        eq(schema.personality.id, personalityId),
+        eq(schema.personality.isDefault, true)
+      ),
+    });
+
+    if (defaultPersonality) {
+      return {
+        success: false,
+        error: "Cannot delete system defaults. Edit it to create your own copy first.",
+      };
     }
 
-    // Soft delete
-    await db
-      .update(schema.personality)
-      .set({ isActive: false })
-      .where(eq(schema.personality.id, personalityId));
-
-    return { success: true };
+    return { success: false, error: "Personality not found" };
   } catch (error) {
     console.error("Failed to delete personality:", error);
     return {
       success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+// Clone default personalities for a user so they can customize them
+export async function cloneDefaultsForUserAction(
+  userId: string
+): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    // Check if user already has personalities (already cloned)
+    const existingUserPersonalities = await db.query.personality.findMany({
+      where: and(
+        eq(schema.personality.userId, userId),
+        eq(schema.personality.isActive, true)
+      ),
+    });
+
+    if (existingUserPersonalities.length > 0) {
+      // User already has personalities, no need to clone
+      return { success: true, count: 0 };
+    }
+
+    // Get all default personalities
+    const defaults = await db.query.personality.findMany({
+      where: eq(schema.personality.isDefault, true),
+    });
+
+    if (defaults.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    // Clone each default for the user
+    const clones = defaults.map((p) => ({
+      id: nanoid(),
+      userId: userId,
+      name: p.name,
+      description: p.description,
+      traits: p.traits,
+      systemPrompt: p.systemPrompt,
+      color: p.color,
+      isDefault: false,
+      isActive: true,
+      version: 1,
+    }));
+
+    await db.insert(schema.personality).values(clones);
+
+    return { success: true, count: clones.length };
+  } catch (error) {
+    console.error("Failed to clone defaults for user:", error);
+    return {
+      success: false,
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+// Reset all user personalities to defaults (soft delete existing, re-clone)
+export async function resetToDefaultsAction(
+  userId: string
+): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    // Soft delete all user's existing personalities
+    await db
+      .update(schema.personality)
+      .set({ isActive: false })
+      .where(eq(schema.personality.userId, userId));
+
+    // Get all default personalities
+    const defaults = await db.query.personality.findMany({
+      where: eq(schema.personality.isDefault, true),
+    });
+
+    if (defaults.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    // Clone each default for the user
+    const clones = defaults.map((p) => ({
+      id: nanoid(),
+      userId: userId,
+      name: p.name,
+      description: p.description,
+      traits: p.traits,
+      systemPrompt: p.systemPrompt,
+      color: p.color,
+      isDefault: false,
+      isActive: true,
+      version: 1,
+    }));
+
+    await db.insert(schema.personality).values(clones);
+
+    return { success: true, count: clones.length };
+  } catch (error) {
+    console.error("Failed to reset to defaults:", error);
+    return {
+      success: false,
+      count: 0,
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }

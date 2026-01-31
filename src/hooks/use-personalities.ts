@@ -8,6 +8,8 @@ import {
   updatePersonalityAction,
   deletePersonalityAction,
   seedDefaultPersonalitiesAction,
+  cloneDefaultsForUserAction,
+  resetToDefaultsAction,
   type CreatePersonalityInput,
 } from "@/actions/personality.actions";
 import type { PersonalitySelect } from "@/db/schema";
@@ -44,7 +46,9 @@ export function useCreatePersonality() {
         color: input.color ?? "chart-1",
         isDefault: false,
         isActive: true,
+        version: 1,
         createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       queryClient.setQueryData<PersonalitySelect[]>(
@@ -78,6 +82,7 @@ export function useUpdatePersonality() {
       personalityId,
       userId,
       updates,
+      changeReason,
     }: {
       personalityId: string;
       userId: string;
@@ -88,9 +93,36 @@ export function useUpdatePersonality() {
         systemPrompt?: string;
         color?: string;
       };
-    }) => updatePersonalityAction(personalityId, userId, updates),
-    onSuccess: (_result, { userId }) => {
+      changeReason?: string;
+    }) => updatePersonalityAction(personalityId, userId, updates, changeReason),
+    onMutate: async ({ personalityId, userId, updates }) => {
+      await queryClient.cancelQueries({ queryKey: ["personalities", userId] });
+      const previous = queryClient.getQueryData<PersonalitySelect[]>([
+        "personalities",
+        userId,
+      ]);
+
+      // Optimistic update
+      queryClient.setQueryData<PersonalitySelect[]>(
+        ["personalities", userId],
+        (old) =>
+          old?.map((p) =>
+            p.id === personalityId ? { ...p, ...updates, updatedAt: new Date() } : p
+          )
+      );
+
+      return { previous };
+    },
+    onError: (_err, { userId }, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["personalities", userId], context.previous);
+      }
+    },
+    onSettled: (_result, _err, { userId, personalityId }) => {
       queryClient.invalidateQueries({ queryKey: ["personalities", userId] });
+      queryClient.invalidateQueries({
+        queryKey: ["personality-versions", personalityId],
+      });
     },
   });
 }
@@ -106,7 +138,27 @@ export function useDeletePersonality() {
       personalityId: string;
       userId: string;
     }) => deletePersonalityAction(personalityId, userId),
-    onSuccess: (_result, { userId }) => {
+    onMutate: async ({ personalityId, userId }) => {
+      await queryClient.cancelQueries({ queryKey: ["personalities", userId] });
+      const previous = queryClient.getQueryData<PersonalitySelect[]>([
+        "personalities",
+        userId,
+      ]);
+
+      // Optimistic delete - remove immediately
+      queryClient.setQueryData<PersonalitySelect[]>(
+        ["personalities", userId],
+        (old) => old?.filter((p) => p.id !== personalityId)
+      );
+
+      return { previous };
+    },
+    onError: (_err, { userId }, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["personalities", userId], context.previous);
+      }
+    },
+    onSettled: (_result, _err, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ["personalities", userId] });
     },
   });
@@ -119,6 +171,28 @@ export function useSeedDefaultPersonalities() {
     mutationFn: seedDefaultPersonalitiesAction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["personalities"] });
+    },
+  });
+}
+
+export function useCloneDefaultsForUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: cloneDefaultsForUserAction,
+    onSuccess: (_result, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["personalities", userId] });
+    },
+  });
+}
+
+export function useResetToDefaults() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: resetToDefaultsAction,
+    onSuccess: (_result, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["personalities", userId] });
     },
   });
 }

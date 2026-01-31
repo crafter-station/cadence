@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Pencil, Trash2, X, Save, Users } from "lucide-react"
+import { Plus, Pencil, Trash2, X, Save, Users, History, AlertTriangle } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,7 +14,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Select,
   SelectContent,
@@ -23,10 +34,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { PersonalityHistoryDrawer } from "@/components/personality-history-drawer"
 import type { Personality } from "@/lib/types"
+import type { PersonalitySelect } from "@/db/schema"
 
 interface PersonalityManagerProps {
   personalities: Personality[]
+  backendPersonalities?: PersonalitySelect[]
+  userId?: string
   onAdd: (personality: Omit<Personality, "id">) => void
   onEdit: (id: string, personality: Partial<Personality>) => void
   onDelete: (id: string) => void
@@ -59,6 +74,8 @@ const DEFAULT_FORM_DATA: PersonalityFormData = {
 
 export function PersonalityManager({
   personalities,
+  backendPersonalities,
+  userId,
   onAdd,
   onEdit,
   onDelete,
@@ -68,6 +85,10 @@ export function PersonalityManager({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<PersonalityFormData>(DEFAULT_FORM_DATA)
   const [newTrait, setNewTrait] = useState("")
+  const [historyPersonality, setHistoryPersonality] = useState<PersonalitySelect | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Personality | null>(null)
+
+  const getBackendPersonality = (id: string) => backendPersonalities?.find((p) => p.id === id)
 
   const openAddDialog = () => {
     setEditingId(null)
@@ -82,6 +103,7 @@ export function PersonalityManager({
       description: personality.description,
       traits: [...personality.traits],
       color: personality.color,
+      systemPrompt: personality.systemPrompt ?? "",
     })
     setIsDialogOpen(true)
   }
@@ -175,32 +197,47 @@ export function PersonalityManager({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0 ml-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => openEditDialog(personality)}
-                    disabled={disabled}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => onDelete(personality.id)}
-                    disabled={disabled}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
+                {userId && (
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => {
+                        const backendP = getBackendPersonality(personality.id)
+                        if (backendP) setHistoryPersonality(backendP)
+                      }}
+                      disabled={disabled}
+                      title="View history"
+                    >
+                      <History className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => openEditDialog(personality)}
+                      disabled={disabled}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={() => setDeleteTarget(personality)}
+                      disabled={disabled}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
 
             {personalities.length === 0 && (
               <div className="p-8 text-center text-muted-foreground text-sm">
-                No personalities yet. Add your first test personality to get started.
+                No personas yet. Click "Add New" to create your first test persona.
               </div>
             )}
           </div>
@@ -328,6 +365,45 @@ export function PersonalityManager({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {historyPersonality && userId && (
+        <PersonalityHistoryDrawer
+          personality={historyPersonality}
+          userId={userId}
+          open={!!historyPersonality}
+          onOpenChange={(open) => {
+            if (!open) setHistoryPersonality(null)
+          }}
+        />
+      )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Persona
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <span className="font-medium text-foreground">{deleteTarget?.name}</span>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteTarget) {
+                  onDelete(deleteTarget.id)
+                  setDeleteTarget(null)
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
