@@ -176,7 +176,7 @@ export default function EvaluationPage() {
   }, [personalities])
 
   const totalTests = selectedPersonalities.length * testsPerPersonality
-  const isValid = selectedPersonalities.length > 0 && activePrompt
+  const isValid = selectedPersonalities.length > 0 && activePrompt && externalAgent
 
   const handleStartExperiment = async () => {
     if (!userId || !activePrompt || selectedPersonalities.length === 0) return
@@ -189,6 +189,7 @@ export default function EvaluationPage() {
         userId,
         name: experimentName,
         sourcePromptId: activePrompt.id,
+        externalAgentId: externalAgent!.id,
         config: {
           maxEpochs,
           testsPerEpoch: totalTests,

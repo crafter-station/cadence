@@ -57,7 +57,7 @@ export function EvaluationCreator() {
   const { user } = useUser()
   const { data: prompts } = usePrompts(user?.id ?? "")
   const { data: personalities } = usePersonalities(user?.id ?? "")
-  const { data: externalAgents } = useExternalAgents(user?.id)
+  const { data: externalAgents } = useExternalAgents(user?.id ?? "")
   const createEvaluation = useCreateEvaluation()
 
   const [name, setName] = useState("")
