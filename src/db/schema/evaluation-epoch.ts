@@ -46,8 +46,16 @@ export const evaluationEpoch = pgTable("evaluation_epoch", {
   // Applied improvements
   improvementApplied: jsonb("improvement_applied").$type<{
     suggestionIds: string[];
-    changes: string[];
+    changes: Array<string | {
+      type: "added" | "modified" | "removed" | "restructured";
+      section: string;
+      description: string;
+      before?: string;
+      after?: string;
+    }>;
     reasoning: string;
+    originalPrompt?: string;
+    improvedPrompt?: string;
   }>(),
 
   // Was this prompt accepted as new best?

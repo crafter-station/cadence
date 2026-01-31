@@ -238,6 +238,8 @@ export const RunEpochTask = schemaTask({
           suggestionIds: optimization.appliedSuggestionIds,
           changes: optimization.changes,
           reasoning: optimization.reasoning,
+          originalPrompt: prompt.content,
+          improvedPrompt: optimization.improvedPrompt,
         },
         completedAt: new Date(),
       })

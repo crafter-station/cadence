@@ -372,31 +372,51 @@ export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
                           {improvement.changes && improvement.changes.length > 0 && (
                             <div>
                               <div className="text-xs font-medium text-muted-foreground mb-2">
-                                CHANGES APPLIED
+                                CHANGES APPLIED ({improvement.changes.length})
                               </div>
                               <div className="space-y-2">
                                 {improvement.changes.map((change: any, i: number) => (
                                   <div key={i} className="p-3 bg-secondary/50 rounded-lg">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <Badge variant="outline" className="text-xs capitalize">
-                                        {change.type}
-                                      </Badge>
-                                      <span className="text-sm font-medium">{change.section}</span>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">{change.description}</p>
+                                    {/* Handle structured changes (new format) */}
+                                    {typeof change === "object" && change.type ? (
+                                      <>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <Badge
+                                            variant="outline"
+                                            className={`text-xs capitalize ${
+                                              change.type === "added" ? "text-chart-1 border-chart-1/30" :
+                                              change.type === "removed" ? "text-chart-3 border-chart-3/30" :
+                                              change.type === "modified" ? "text-chart-2 border-chart-2/30" :
+                                              ""
+                                            }`}
+                                          >
+                                            {change.type}
+                                          </Badge>
+                                          <span className="text-sm font-medium">{change.section}</span>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mb-2">{change.description}</p>
 
-                                    {/* Diff view */}
-                                    {change.before && change.after && (
-                                      <div className="mt-3 space-y-2 text-xs font-mono">
-                                        <div className="p-2 bg-chart-3/10 text-chart-3 rounded border border-chart-3/20">
-                                          <span className="opacity-60">- </span>
-                                          {change.before.slice(0, 200)}{change.before.length > 200 && "..."}
-                                        </div>
-                                        <div className="p-2 bg-chart-1/10 text-chart-1 rounded border border-chart-1/20">
-                                          <span className="opacity-60">+ </span>
-                                          {change.after.slice(0, 200)}{change.after.length > 200 && "..."}
-                                        </div>
-                                      </div>
+                                        {/* Diff view for before/after */}
+                                        {(change.before || change.after) && (
+                                          <div className="space-y-1.5 text-xs font-mono">
+                                            {change.before && (
+                                              <div className="p-2 bg-chart-3/10 text-chart-3 rounded border border-chart-3/20 whitespace-pre-wrap">
+                                                <span className="opacity-60 select-none">- </span>
+                                                {change.before}
+                                              </div>
+                                            )}
+                                            {change.after && (
+                                              <div className="p-2 bg-chart-1/10 text-chart-1 rounded border border-chart-1/20 whitespace-pre-wrap">
+                                                <span className="opacity-60 select-none">+ </span>
+                                                {change.after}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </>
+                                    ) : (
+                                      /* Handle string changes (old format) */
+                                      <p className="text-sm">{typeof change === "string" ? change : JSON.stringify(change)}</p>
                                     )}
                                   </div>
                                 ))}
@@ -404,8 +424,34 @@ export function EvaluationDetail({ evaluationId }: EvaluationDetailProps) {
                             </div>
                           )}
 
-                          {/* View prompt version */}
-                          {epoch.prompt && (
+                          {/* Full Prompt Diff */}
+                          {improvement.originalPrompt && improvement.improvedPrompt && (
+                            <div className="pt-3 border-t border-border">
+                              <details className="group">
+                                <summary className="text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1 mb-3">
+                                  <ChevronRight className="w-3 h-3 transition-transform group-open:rotate-90" />
+                                  View full prompt diff
+                                </summary>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <div className="text-xs font-medium text-chart-3 mb-2">Original (v{epoch.epochNumber})</div>
+                                    <pre className="p-3 bg-chart-3/5 border border-chart-3/20 rounded-lg text-xs overflow-auto max-h-64 whitespace-pre-wrap">
+                                      {improvement.originalPrompt}
+                                    </pre>
+                                  </div>
+                                  <div>
+                                    <div className="text-xs font-medium text-chart-1 mb-2">Improved (v{epoch.epochNumber + 1})</div>
+                                    <pre className="p-3 bg-chart-1/5 border border-chart-1/20 rounded-lg text-xs overflow-auto max-h-64 whitespace-pre-wrap">
+                                      {improvement.improvedPrompt}
+                                    </pre>
+                                  </div>
+                                </div>
+                              </details>
+                            </div>
+                          )}
+
+                          {/* Fallback: View current prompt version */}
+                          {!improvement.improvedPrompt && epoch.prompt && (
                             <div className="pt-2 border-t border-border">
                               <details className="group">
                                 <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">

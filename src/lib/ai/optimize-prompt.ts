@@ -1,7 +1,7 @@
 import { generateObject } from "ai";
 import { z } from "zod";
 
-import type { PersonalitySelect, HealingSuggestionSelect } from "@/db/schema";
+import type { HealingSuggestionSelect } from "@/db/schema";
 
 const DEFAULT_MODEL = "anthropic/claude-3-5-haiku-latest";
 
@@ -31,24 +31,41 @@ interface OptimizePromptParams {
   conversionGoals: string[];
 }
 
+export interface PromptChange {
+  type: "added" | "modified" | "removed" | "restructured";
+  section: string;
+  description: string;
+  before?: string;
+  after?: string;
+}
+
 interface OptimizePromptResult {
   improvedPrompt: string;
-  changes: string[];
+  changes: PromptChange[];
   reasoning: string;
   predictedImpact: {
     accuracy: number;
     conversion: number;
   };
   appliedSuggestionIds: string[];
+  originalPrompt: string;
 }
+
+const PromptChangeSchema = z.object({
+  type: z.enum(["added", "modified", "removed", "restructured"]),
+  section: z.string().describe("The section of the prompt that was changed (e.g., 'Greeting', 'Tone', 'Instructions')"),
+  description: z.string().describe("A brief description of what was changed"),
+  before: z.string().optional().describe("The original text (for modified/removed changes)"),
+  after: z.string().optional().describe("The new text (for added/modified changes)"),
+});
 
 const OptimizedPromptSchema = z.object({
   improvedPrompt: z
     .string()
     .describe("The complete improved prompt with all changes applied"),
   changes: z
-    .array(z.string())
-    .describe("List of specific changes made to the prompt"),
+    .array(PromptChangeSchema)
+    .describe("List of specific changes made to the prompt with before/after text"),
   reasoning: z
     .string()
     .describe("Explanation of why these changes will improve performance"),
@@ -135,25 +152,31 @@ ${transcriptSummary || "No samples available"}
 
 Improve the prompt to address the identified issues while maintaining the core functionality.
 Focus on changes that will have the highest impact on ${targetMetric}.
-Be specific about what you changed and why.`;
+
+IMPORTANT: For each change you make, include the exact "before" and "after" text so the user can see what changed.
+- For "added" changes: include only "after" with the new text
+- For "modified" changes: include both "before" (original) and "after" (new)
+- For "removed" changes: include only "before" with the removed text
+- For "restructured" changes: include both "before" and "after" showing the reorganization`;
 
   try {
     const result = await generateObject({
       model: process.env.ANALYSIS_MODEL || DEFAULT_MODEL,
       schema: OptimizedPromptSchema,
       system: systemPrompt,
-      prompt: `Analyze the current prompt performance and generate an improved version. Include the IDs of any healing suggestions you incorporated.`,
+      prompt: `Analyze the current prompt performance and generate an improved version. Include the IDs of any healing suggestions you incorporated. For each change, provide the exact before/after text.`,
     });
 
     return {
       improvedPrompt: result.object.improvedPrompt,
-      changes: result.object.changes,
+      changes: result.object.changes as PromptChange[],
       reasoning: result.object.reasoning,
       predictedImpact: {
         accuracy: result.object.predictedAccuracyImprovement,
         conversion: result.object.predictedConversionImprovement,
       },
       appliedSuggestionIds: result.object.appliedSuggestionIds,
+      originalPrompt: currentPrompt,
     };
   } catch (error) {
     console.error("Failed to optimize prompt:", error);
@@ -166,10 +189,17 @@ Be specific about what you changed and why.`;
     if (topSuggestion?.suggestedPrompt) {
       return {
         improvedPrompt: topSuggestion.suggestedPrompt,
-        changes: [`Applied suggestion: ${topSuggestion.suggestion}`],
+        changes: [{
+          type: "modified",
+          section: "Full Prompt",
+          description: topSuggestion.suggestion,
+          before: currentPrompt.slice(0, 200),
+          after: topSuggestion.suggestedPrompt.slice(0, 200),
+        }],
         reasoning: `Fallback: Applied highest-confidence healing suggestion (${topSuggestion.confidence?.toFixed(2) ?? "N/A"})`,
         predictedImpact: { accuracy: 5, conversion: 5 },
         appliedSuggestionIds: [topSuggestion.id],
+        originalPrompt: currentPrompt,
       };
     }
 
@@ -180,6 +210,7 @@ Be specific about what you changed and why.`;
       reasoning: "No changes could be applied automatically",
       predictedImpact: { accuracy: 0, conversion: 0 },
       appliedSuggestionIds: [],
+      originalPrompt: currentPrompt,
     };
   }
 }
