@@ -11,6 +11,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://cadence.crafter.run'),
   title: 'Cadence — AI Agent Evaluation',
   description: 'Large-scale parallel testing and optimization for AI agents and LLM-powered systems',
   icons: {
@@ -24,8 +25,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Cadence — AI Agent Evaluation',
     description: 'Large-scale parallel testing and optimization for AI agents and LLM-powered systems',
-    images: [{ url: '/og.png', width: 1200, height: 630 }],
+    url: 'https://cadence.crafter.run',
+    siteName: 'Cadence',
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Cadence - AI Agent Evaluation' }],
     type: 'website',
+    locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
