@@ -23,4 +23,15 @@ export default defineConfig({
 		},
 	},
 	dirs: ["./src/trigger"],
+	build: {
+		external: [
+			"@livekit/rtc-node",
+			"audio-decode",
+		],
+	},
+	additionalPackages: [
+		"@livekit/rtc-node@0.13.24",
+		"audio-decode@2.2.3",
+		"@vercel/blob@2.0.1",
+	],
 });

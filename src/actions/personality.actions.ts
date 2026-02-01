@@ -140,15 +140,14 @@ export async function seedDefaultPersonalitiesAction(): Promise<{
 export async function getPersonalitiesAction(
   userId?: string
 ): Promise<schema.PersonalitySelect[]> {
-  if (!userId) {
-    return [];
-  }
-
-  // Only return user's own personalities (no defaults)
+  // Return all active personalities: user's own + shared (userId is null)
   return db.query.personality.findMany({
     where: and(
       eq(schema.personality.isActive, true),
-      eq(schema.personality.userId, userId)
+      or(
+        isNull(schema.personality.userId),
+        userId ? eq(schema.personality.userId, userId) : undefined
+      )
     ),
     orderBy: (personality, { asc }) => [asc(personality.name)],
   });

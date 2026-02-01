@@ -3,6 +3,9 @@
 import Link from "next/link"
 import { ArrowRight, Play, Zap, Users, GitBranch, BarChart3, Sparkles } from "lucide-react"
 import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs"
+import { GithubBadge } from "@/components/github-badge"
+import { CrafterStationLogo } from "@/components/crafter-station-logo"
+import { KeboLogo } from "@/components/kebo-logo"
 
 export default function LandingPage() {
   return (
@@ -61,6 +64,7 @@ export default function LandingPage() {
           <Link href="#how-it-works" className="hidden sm:block text-xs text-[#E8E4D9]/60 hover:text-[#E8E4D9] transition-colors">
             How It Works
           </Link>
+          <GithubBadge />
           <SignedOut>
             <SignInButton mode="modal">
               <button className="text-xs px-3 sm:px-4 py-2 bg-[#E8E4D9] text-[#0A0A0A] hover:bg-[#E8E4D9]/90 transition-colors">
@@ -418,9 +422,27 @@ export default function LandingPage() {
               <div className="w-2 h-2 bg-[#E8E4D9]/40" />
               <span className="text-xs sm:text-sm text-[#E8E4D9]/40">cadence</span>
             </div>
-            <p className="text-xs sm:text-sm text-[#E8E4D9]/30">
-              © 2025 Crafter Station. All rights reserved.
-            </p>
+            <div className="flex items-center gap-4">
+              <a
+                href="https://www.crafterstation.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[#E8E4D9]/30 hover:text-[#E8E4D9]/50 transition-colors"
+              >
+                <CrafterStationLogo className="w-4 h-4" />
+              </a>
+              <a
+                href="https://kebo.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[#E8E4D9]/30 hover:text-[#E8E4D9]/50 transition-colors"
+              >
+                <KeboLogo className="w-4 h-4" />
+              </a>
+              <p className="text-xs sm:text-sm text-[#E8E4D9]/30">
+                © 2025 Crafter Station. All rights reserved.
+              </p>
+            </div>
           </div>
         </div>
 

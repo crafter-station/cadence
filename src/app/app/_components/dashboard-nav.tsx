@@ -14,6 +14,7 @@ import {
   Users,
   Target,
 } from "lucide-react"
+import { GithubBadge } from "@/components/github-badge"
 
 const MODULES = [
   { id: "evaluation", href: "/app", label: "Evaluation", icon: Play },
@@ -66,6 +67,7 @@ export function DashboardNav() {
           </div>
 
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <GithubBadge variant="default" />
             <SignedOut>
               <SignInButton mode="modal">
                 <button className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
