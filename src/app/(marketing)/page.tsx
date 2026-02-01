@@ -64,6 +64,24 @@ export default function LandingPage() {
           <Link href="#how-it-works" className="hidden sm:block text-xs text-[#E8E4D9]/60 hover:text-[#E8E4D9] transition-colors">
             How It Works
           </Link>
+          <div className="hidden sm:flex items-center gap-2">
+            <a
+              href="https://www.crafterstation.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#E8E4D9]/40 hover:text-[#E8E4D9]/70 transition-colors"
+            >
+              <CrafterStationLogo className="w-5 h-5" />
+            </a>
+            <a
+              href="https://kebo.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#E8E4D9]/40 hover:text-[#E8E4D9]/70 transition-colors"
+            >
+              <KeboLogo className="w-5 h-5" />
+            </a>
+          </div>
           <GithubBadge />
           <SignedOut>
             <SignInButton mode="modal">
